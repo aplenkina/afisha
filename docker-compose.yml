@@ -1,0 +1,75 @@
+services:
+  app:
+    build:
+      context: ./
+      dockerfile: ./docker/frankenphp/Dockerfile
+    environment:
+      APP_NAME: afisha
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: afisha
+    working_dir: /var/www/html/app
+    ports:
+      - '1910:80'
+    volumes:
+      - ./app:/var/www/html/app
+      - ./docker/frankenphp/Caddyfile:/etc/caddy/Caddyfile:ro
+    secrets:
+      - APP_SECRET
+  
+  app-go:
+    build:
+      context: ./
+      dockerfile: ./docker/go/Dockerfile
+    environment:
+      APP_NAME: afisha
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: afisha
+      DATABASE_USER_FILE: /run/secrets/POSTGRES_USER
+      DATABASE_PASSWORD_FILE: /run/secrets/POSTGRES_PASSWORD
+      TELEGRAM_BOT_TOKEN_FILE: /run/secrets/TELEGRAM_BOT_TOKEN
+      TELEGRAM_CHAT_ID_FILE: /run/secrets/TELEGRAM_CHAT_ID
+    develop:
+      watch:
+        - action: rebuild
+          path: ./app-go
+    secrets:
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - TELEGRAM_BOT_TOKEN
+      - TELEGRAM_CHAT_ID
+    ports:
+      - '1912:8080'
+
+  postgres:
+    build:
+      context: ./
+      dockerfile: ./docker/postgres/Dockerfile
+    working_dir: /var/lib/postgresql
+    environment:
+      POSTGRES_DB: afisha
+      POSTGRES_USER_FILE: /run/secrets/POSTGRES_USER
+      POSTGRES_PASSWORD_FILE: /run/secrets/POSTGRES_PASSWORD
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    secrets:
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+    ports:
+      - '1911:5432'
+
+secrets:
+  POSTGRES_USER:
+    file: docker/secrets/POSTGRES_USER.txt
+  POSTGRES_PASSWORD:
+    file: docker/secrets/POSTGRES_PASSWORD.txt
+  TELEGRAM_BOT_TOKEN:
+    file: docker/secrets/TELEGRAM_BOT_TOKEN.txt
+  TELEGRAM_CHAT_ID:
+    file: docker/secrets/TELEGRAM_CHAT_ID.txt
+  APP_SECRET:
+    file: docker/secrets/APP_SECRET.txt
+
+volumes:
+  postgres_data:
