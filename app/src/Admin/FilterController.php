@@ -2,7 +2,6 @@
 
 namespace App\Admin;
 
-use App\Catalog\Application\ShowCatalog\GetCategoryQuery;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminRoute;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -19,12 +18,10 @@ class FilterController extends AbstractController
     #[AdminRoute('/', name: 'index')]
     public function show(): Response
     {
-
     }
 
     #[AdminRoute('/', name: 'new')]
     public function new(): Response
     {
-
     }
 }

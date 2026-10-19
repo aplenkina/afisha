@@ -2,7 +2,6 @@
 
 namespace App\Admin\Application\ListVenues;
 
-use App\Catalog\Domain\Source;
 use App\Catalog\Domain\Venue;
 use App\Shared\Bus\Query\ResponseInterface;
 

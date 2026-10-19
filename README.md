@@ -31,7 +31,8 @@ cp app/.env.example app/.env
 ```
 
 Впишите в нём `DATABASE_USER` и `DATABASE_PASSWORD` **те же**, что в `docker/secrets/POSTGRES_USER.txt` и `POSTGRES_PASSWORD.txt`. Остальные значения (хост, порт и имя базы) уже подходят для Docker.
-Другие `.env`-файлы не нужны: `docker-compose.yml` в корневом `.env` не нуждается, а `app/.env.dev` и `app/.env.test` уже в репозитории.
+`APP_SECRET` вписывать не нужно: при старте контейнера `app` создаёт `app/.env.local` из `docker/secrets/APP_SECRET.txt` по шаблону `app/.env.template` (файл в `.gitignore`, при каждом старте перезаписывается).
+Другие `.env`-файлы не нужны: `docker-compose.yml` в корневом `.env` не нуждается, а `app/.env.test` уже в репозитории.
 
 ### 3. Контейнеры
 
@@ -41,9 +42,9 @@ docker compose up -d --build
 
 | Сервис | Адрес |
 |---|---|
-| сайт и админка (`app`) | http://127.0.0.1:1810, админка `/admin` |
-| PostgreSQL | `127.0.0.1:1811` |
-| сборщик (`app-go`), `/health` | http://127.0.0.1:1812 |
+| сайт и админка (`app`) | http://127.0.0.1:1910, админка `/admin` |
+| PostgreSQL | `127.0.0.1:1911` |
+| сборщик (`app-go`), `/health` | http://127.0.0.1:1912 |
 
 ### 4. PHP-зависимости (`app/vendor`)
 

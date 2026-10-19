@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace App\Shared\Domain;
 
-use Override;
-
-use function sprintf;
-
 class EnumTypeMismatched extends DomainError
 {
     /**
@@ -18,15 +14,15 @@ class EnumTypeMismatched extends DomainError
         parent::__construct();
     }
 
-    #[Override]
+    #[\Override]
     public function errorCode(): string
     {
         return '3347128a-7e8b-430b-b28f-79579c46d04e';
     }
 
-    #[Override]
+    #[\Override]
     protected function errorMessage(): string
     {
-        return sprintf('Enum должен быть следующих типов: %s.', implode(', ', $this->allowedTypes));
+        return \sprintf('Enum должен быть следующих типов: %s.', implode(', ', $this->allowedTypes));
     }
 }

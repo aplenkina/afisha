@@ -25,7 +25,7 @@ final readonly class CreateVenueHandler implements HandlerInterface
 
         $existing = $this->venueRepository->findByCityAndName($command->cityId, $command->name);
 
-        if ($existing !== null) {
+        if (null !== $existing) {
             $existing->update(
                 cityId: $command->cityId,
                 name: $command->name,

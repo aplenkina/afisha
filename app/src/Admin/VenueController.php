@@ -6,9 +6,6 @@ use App\Admin\Application\GetVenue\GetVenueQuery;
 use App\Admin\Application\GetVenue\GetVenueResponse;
 use App\Admin\Application\ListCities\ListCitiesQuery;
 use App\Admin\Application\ListCities\ListCitiesResponse;
-use App\Admin\Application\ListEvents\ListEventsHandler;
-use App\Admin\Application\ListEvents\ListEventsResponse;
-use App\Admin\Application\ListSources\ListSourcesResponse;
 use App\Admin\Application\ListVenues\ListVenuesQuery;
 use App\Admin\Application\ListVenues\ListVenuesResponse;
 use App\Admin\Request\VenueRequest;
@@ -18,10 +15,10 @@ use App\Catalog\Application\UpdateVenue\UpdateVenueCommand;
 use App\Catalog\Domain\VenueNotFound;
 use App\Shared\Domain\DomainError;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminRoute;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[AdminRoute('/venue', name: 'venue')]
 #[IsGranted('ROLE_MODERATOR')]
@@ -73,7 +70,7 @@ class VenueController extends AbstractAdminController
         $id = $this->toInt($request->id);
 
         try {
-            if ($id === null) {
+            if (null === $id) {
                 $this->dispatch(new CreateVenueCommand(
                     cityId: (int) $request->cityId,
                     name: $request->name,
@@ -92,7 +89,7 @@ class VenueController extends AbstractAdminController
                 ));
             }
         } catch (DomainError $error) {
-            return $this->fail($error, $id !== null ? 'admin_venue_details' : 'admin_venue_new', $id !== null ? ['id' => $id] : []);
+            return $this->fail($error, null !== $id ? 'admin_venue_details' : 'admin_venue_new', null !== $id ? ['id' => $id] : []);
         }
 
         $this->addFlash('success', 'Площадка сохранена');

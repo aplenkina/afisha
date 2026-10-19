@@ -3,7 +3,6 @@
 namespace App\Identity\Domain;
 
 use App\Shared\Domain\DomainEntityConflict;
-use Override;
 
 final class UserEmailTaken extends DomainEntityConflict
 {
@@ -16,13 +15,13 @@ final class UserEmailTaken extends DomainEntityConflict
         parent::__construct();
     }
 
-    #[Override]
+    #[\Override]
     public function errorCode(): string
     {
         return self::CODE;
     }
 
-    #[Override]
+    #[\Override]
     protected function errorMessage(): string
     {
         return sprintf(self::MESSAGE, $this->value);

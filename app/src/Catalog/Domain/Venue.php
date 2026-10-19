@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Catalog\Domain;
 
 use App\Shared\Domain\DomainEntity;
-use DateTimeImmutable;
 
 class Venue extends DomainEntity
 {
@@ -17,7 +16,7 @@ class Venue extends DomainEntity
         private string $address,
         private ?float $latitude,
         private ?float $longitude,
-        private DateTimeImmutable $createdAt,
+        private \DateTimeImmutable $createdAt,
     ) {
     }
 
@@ -34,7 +33,7 @@ class Venue extends DomainEntity
             address: $address,
             latitude: $latitude,
             longitude: $longitude,
-            createdAt: new DateTimeImmutable(),
+            createdAt: new \DateTimeImmutable(),
         );
     }
 
@@ -82,7 +81,7 @@ class Venue extends DomainEntity
         return $this->longitude;
     }
 
-    public function getCreatedAt(): DateTimeImmutable
+    public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
     }

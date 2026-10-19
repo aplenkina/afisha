@@ -3,7 +3,6 @@
 namespace App\Catalog\Domain;
 
 use App\Shared\Domain\DomainEntityNotFound;
-use Override;
 
 final class CityNotFound extends DomainEntityNotFound
 {
@@ -16,13 +15,13 @@ final class CityNotFound extends DomainEntityNotFound
         parent::__construct();
     }
 
-    #[Override]
+    #[\Override]
     public function errorCode(): string
     {
         return self::CODE;
     }
 
-    #[Override]
+    #[\Override]
     protected function errorMessage(): string
     {
         return sprintf(self::MESSAGE, $this->id);

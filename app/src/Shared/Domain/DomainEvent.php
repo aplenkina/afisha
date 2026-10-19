@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Shared\Domain;
 
 use App\Shared\Domain\Contract\DomainEventInterface;
-use Override;
 
 abstract readonly class DomainEvent implements DomainEventInterface
 {
@@ -20,13 +19,13 @@ abstract readonly class DomainEvent implements DomainEventInterface
         $this->occurredOn = $occurredOn ?: date('Y-m-d H:i:s');
     }
 
-    #[Override]
+    #[\Override]
     public function getAggregateId(): string
     {
         return $this->aggregateId;
     }
 
-    #[Override]
+    #[\Override]
     public function getOccurredOn(): string
     {
         return $this->occurredOn;

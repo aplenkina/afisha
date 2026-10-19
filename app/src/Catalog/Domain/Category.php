@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Catalog\Domain;
 
 use App\Shared\Domain\DomainEntity;
-use DateTimeImmutable;
 
 class Category extends DomainEntity
 {
@@ -16,7 +15,7 @@ class Category extends DomainEntity
         private string $alias,
         private int $position,
         private bool $available,
-        private DateTimeImmutable $createdAt,
+        private \DateTimeImmutable $createdAt,
     ) {
     }
 
@@ -24,9 +23,8 @@ class Category extends DomainEntity
         string $name,
         string $alias,
         int $position,
-    ): self
-    {
-        $createdAt = new DateTimeImmutable();
+    ): self {
+        $createdAt = new \DateTimeImmutable();
 
         return new self(
             name: $name,
@@ -39,7 +37,7 @@ class Category extends DomainEntity
 
     public function update(
         string $name,
-        string $alias
+        string $alias,
     ) {
         $this->name = $name;
         $this->alias = $alias;

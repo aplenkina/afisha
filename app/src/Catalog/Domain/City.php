@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Catalog\Domain;
 
 use App\Shared\Domain\DomainEntity;
-use DateTimeImmutable;
 
 class City extends DomainEntity
 {
@@ -15,7 +14,7 @@ class City extends DomainEntity
         private string $name,
         private string $slug,
         private bool $available,
-        private DateTimeImmutable $createdAt,
+        private \DateTimeImmutable $createdAt,
     ) {
     }
 
@@ -27,7 +26,7 @@ class City extends DomainEntity
             name: $name,
             slug: $slug,
             available: false,
-            createdAt: new DateTimeImmutable(),
+            createdAt: new \DateTimeImmutable(),
         );
     }
 
@@ -67,7 +66,7 @@ class City extends DomainEntity
         return $this->available;
     }
 
-    public function getCreatedAt(): DateTimeImmutable
+    public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
     }

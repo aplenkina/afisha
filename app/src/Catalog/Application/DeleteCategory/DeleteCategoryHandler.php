@@ -10,10 +10,9 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 #[AsMessageHandler]
 class DeleteCategoryHandler implements HandlerInterface
 {
-
     public function __construct(
         private CategoryRepositoryInterface $categoryRepository,
-        private FlusherInterface $flusher
+        private FlusherInterface $flusher,
     ) {
     }
 

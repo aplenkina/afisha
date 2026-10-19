@@ -21,7 +21,7 @@ class HomeController extends AbstractController
     #[Route('/', name: 'home', methods: [Request::METHOD_GET])]
     public function index(): Response
     {
-        /** @var $result CatalogShowResponse */
+        /** @var CatalogShowResponse $result */
         $result = $this->messageBus->dispatch(new CatalogShowQuery(onlyAvailable: true))->last(HandledStamp::class)->getResult();
 
         $categories = array_map(function ($item) {

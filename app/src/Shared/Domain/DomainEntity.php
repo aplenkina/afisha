@@ -6,8 +6,6 @@ namespace App\Shared\Domain;
 
 use App\Shared\Domain\Contract\DomainEventInterface;
 
-use function sprintf;
-
 class DomainEntity
 {
     /**
@@ -55,6 +53,6 @@ class DomainEntity
 
     protected function getEventKey(DomainEventInterface $event): string
     {
-        return sprintf('%s_%d', $event::class, $event->getAggregateId());
+        return \sprintf('%s_%d', $event::class, $event->getAggregateId());
     }
 }

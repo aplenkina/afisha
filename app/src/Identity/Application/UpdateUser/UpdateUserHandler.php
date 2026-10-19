@@ -3,10 +3,10 @@
 namespace App\Identity\Application\UpdateUser;
 
 use App\Identity\Domain\LastAdminProtected;
+use App\Identity\Domain\User;
 use App\Identity\Domain\UserEmailTaken;
 use App\Identity\Domain\UserRole;
 use App\Identity\UserRepositoryInterface;
-use App\Identity\Domain\User;
 use App\Shared\Application\FlusherInterface;
 use App\Shared\Bus\Command\HandlerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -30,14 +30,14 @@ final readonly class UpdateUserHandler implements HandlerInterface
             throw new UserEmailTaken(mb_strtolower($command->email));
         }
 
-        $staysActiveAdmin = $command->role === UserRole::Admin && $command->active;
+        $staysActiveAdmin = UserRole::Admin === $command->role && $command->active;
         if ($user->isAdmin() && $user->isActive() && !$staysActiveAdmin && $this->userRepository->countActiveAdmins() <= 1) {
             throw new LastAdminProtected();
         }
 
         $user->update($command->email, $command->role, $command->active);
 
-        if ($command->plainPassword !== null && $command->plainPassword !== '') {
+        if (null !== $command->plainPassword && '' !== $command->plainPassword) {
             $user->changePassword($this->hasherFactory->getPasswordHasher(User::class)->hash($command->plainPassword));
         }
 

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Catalog\Domain;
 
 use App\Shared\Domain\DomainEntity;
-use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 
@@ -36,8 +35,8 @@ class Event extends DomainEntity
         private ?int $sourceId,
         private ?string $externalId,
         private ?int $createdBy,
-        private DateTimeImmutable $createdAt,
-        private DateTimeImmutable $updatedAt,
+        private \DateTimeImmutable $createdAt,
+        private \DateTimeImmutable $updatedAt,
     ) {
         $this->sessions = new ArrayCollection();
     }
@@ -60,7 +59,7 @@ class Event extends DomainEntity
         ?string $externalId = null,
         ?int $createdBy = null,
     ): self {
-        $now = new DateTimeImmutable();
+        $now = new \DateTimeImmutable();
 
         return new self(
             title: $title,
@@ -137,8 +136,8 @@ class Event extends DomainEntity
     }
 
     public function addSession(
-        DateTimeImmutable $startsAt,
-        ?DateTimeImmutable $endsAt = null,
+        \DateTimeImmutable $startsAt,
+        ?\DateTimeImmutable $endsAt = null,
         ?int $venueId = null,
         ?string $ticketUrl = null,
     ): EventSession {
@@ -264,12 +263,12 @@ class Event extends DomainEntity
         return $this->createdBy;
     }
 
-    public function getCreatedAt(): DateTimeImmutable
+    public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
     }
 
-    public function getUpdatedAt(): DateTimeImmutable
+    public function getUpdatedAt(): \DateTimeImmutable
     {
         return $this->updatedAt;
     }
@@ -290,6 +289,6 @@ class Event extends DomainEntity
 
     private function touch(): void
     {
-        $this->updatedAt = new DateTimeImmutable();
+        $this->updatedAt = new \DateTimeImmutable();
     }
 }

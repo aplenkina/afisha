@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Catalog\Domain;
 
 use App\Shared\Domain\DomainEntity;
-use DateTimeImmutable;
 
 class EventSession extends DomainEntity
 {
@@ -13,15 +12,15 @@ class EventSession extends DomainEntity
 
     public function __construct(
         private readonly Event $event,
-        private DateTimeImmutable $startsAt,
-        private ?DateTimeImmutable $endsAt,
+        private \DateTimeImmutable $startsAt,
+        private ?\DateTimeImmutable $endsAt,
         private ?int $venueId,
         private ?string $ticketUrl,
         private SessionStatus $status,
     ) {
     }
 
-    public function reschedule(DateTimeImmutable $startsAt, ?DateTimeImmutable $endsAt): void
+    public function reschedule(\DateTimeImmutable $startsAt, ?\DateTimeImmutable $endsAt): void
     {
         $this->startsAt = $startsAt;
         $this->endsAt = $endsAt;
@@ -67,12 +66,12 @@ class EventSession extends DomainEntity
         return $this->event;
     }
 
-    public function getStartsAt(): DateTimeImmutable
+    public function getStartsAt(): \DateTimeImmutable
     {
         return $this->startsAt;
     }
 
-    public function getEndsAt(): ?DateTimeImmutable
+    public function getEndsAt(): ?\DateTimeImmutable
     {
         return $this->endsAt;
     }

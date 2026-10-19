@@ -21,7 +21,7 @@ trait BaseEnumTrait
     {
         $type = self::tryFrom($value);
 
-        if ($type === null) {
+        if (null === $type) {
             throw new EnumTypeMismatched(self::values());
         }
 

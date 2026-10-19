@@ -152,5 +152,7 @@ func schedule(ctx context.Context, r *runner.Runner, st *store.Store, logger *sl
 	}
 
 	logger.Info("планировщик запущен", "daily_at", at, "zone", loc.String())
-	s.Loop(ctx, 30*time.Second, func(err error) { logger.Error("планировщик", "err", err) })
+	s.Loop(ctx, 30*time.Second, sched.ThrottleErrors(10*time.Minute, time.Now, func(err error) {
+		logger.Error("планировщик", "err", err)
+	}))
 }

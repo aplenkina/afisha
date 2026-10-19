@@ -5,7 +5,6 @@ namespace App\Catalog\Application\ShowCatalog;
 use App\Catalog\Infrastructure\Repository\CategoryRepositoryInterface;
 use App\Shared\Bus\Command\HandlerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Throwable;
 
 #[AsMessageHandler]
 readonly class CatalogShowHandler implements HandlerInterface
@@ -18,11 +17,10 @@ readonly class CatalogShowHandler implements HandlerInterface
     public function __invoke(CatalogShowQuery $query)
     {
         try {
-
-        $result = $this->categoryRepository->findAll($query->onlyAvailable);
+            $result = $this->categoryRepository->findAll($query->onlyAvailable);
 
             return new CatalogShowResponse($result);
-        } catch (Throwable $exception) {
+        } catch (\Throwable $exception) {
             dd($exception->getMessage());
         }
     }

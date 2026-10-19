@@ -8,5 +8,8 @@ RUN apt-get update \
 WORKDIR /var/www/html/app
 
 COPY docker/frankenphp/Caddyfile /etc/caddy/Caddyfile
+COPY docker/frankenphp/entrypoint.sh /usr/local/bin/app-entrypoint
+RUN chmod +x /usr/local/bin/app-entrypoint
 
+ENTRYPOINT ["app-entrypoint"]
 CMD ["frankenphp", "run", "-c", "/etc/caddy/Caddyfile"]

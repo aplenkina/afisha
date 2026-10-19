@@ -23,7 +23,8 @@ final class CreateUserConsoleCommand extends Command
     ) {
         parent::__construct();
     }
-//        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
+
+    //        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
     protected function configure(): void
     {
         $this
@@ -36,15 +37,15 @@ final class CreateUserConsoleCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        $role = UserRole::tryFrom('ROLE_' . strtoupper((string) $input->getArgument('role')));
-        if ($role === null) {
+        $role = UserRole::tryFrom('ROLE_'.strtoupper((string) $input->getArgument('role')));
+        if (null === $role) {
             $io->error('Роль должна быть editor, moderator или admin');
 
             return Command::INVALID;
         }
 
         $password = $input->getArgument('password');
-        if ($password === null) {
+        if (null === $password) {
             $question = (new Question('Пароль: '))->setHidden(true)->setHiddenFallback(false);
             $password = $io->askQuestion($question);
         }

@@ -13,13 +13,13 @@ final readonly class CreateCategoryHandler implements HandlerInterface
 {
     public function __construct(
         private CategoryRepositoryInterface $categoryRepository,
-        private FlusherInterface $flusher
+        private FlusherInterface $flusher,
     ) {
     }
 
     public function __invoke(CreateCategoryCommand $command): void
     {
-        if ($command->id !== null) {
+        if (null !== $command->id) {
             $category = $this->categoryRepository->findById($command->id);
             $category->update(
                 name: $command->name,

@@ -42,8 +42,8 @@ final readonly class CreateEventHandler implements HandlerInterface
         }
 
         if (
-            $command->sourceId !== null
-            && $command->externalId !== null
+            null !== $command->sourceId
+            && null !== $command->externalId
             && $this->eventRepository->existsBySourceExternalId($command->sourceId, $command->externalId)
         ) {
             throw new EventAlreadyImported($command->sourceId, $command->externalId);
@@ -86,7 +86,7 @@ final readonly class CreateEventHandler implements HandlerInterface
     private function uniqueSlug(string $title): string
     {
         $base = $this->slugGenerator->generate($title);
-        $base = $base !== '' ? $base : self::DEFAULT_SLUG;
+        $base = '' !== $base ? $base : self::DEFAULT_SLUG;
 
         $slug = $base;
         for ($suffix = 2; $this->eventRepository->existsBySlug($slug); ++$suffix) {

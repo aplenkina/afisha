@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Identity\Domain;
 
 use App\Shared\Domain\DomainEntity;
-use DateTimeImmutable;
-use Override;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
@@ -19,7 +17,7 @@ class User extends DomainEntity implements UserInterface, PasswordAuthenticatedU
         private string $password,
         private UserRole $role,
         private bool $active,
-        private DateTimeImmutable $createdAt,
+        private \DateTimeImmutable $createdAt,
     ) {
     }
 
@@ -33,7 +31,7 @@ class User extends DomainEntity implements UserInterface, PasswordAuthenticatedU
             password: $password,
             role: $role,
             active: true,
-            createdAt: new DateTimeImmutable(),
+            createdAt: new \DateTimeImmutable(),
         );
     }
 
@@ -51,7 +49,7 @@ class User extends DomainEntity implements UserInterface, PasswordAuthenticatedU
 
     public function isAdmin(): bool
     {
-        return $this->role === UserRole::Admin;
+        return UserRole::Admin === $this->role;
     }
 
     public function getId(): int
@@ -74,12 +72,12 @@ class User extends DomainEntity implements UserInterface, PasswordAuthenticatedU
         return $this->active;
     }
 
-    public function getCreatedAt(): DateTimeImmutable
+    public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
     }
 
-    #[Override]
+    #[\Override]
     public function getUserIdentifier(): string
     {
         return $this->email;
@@ -88,13 +86,13 @@ class User extends DomainEntity implements UserInterface, PasswordAuthenticatedU
     /**
      * @return list<string>
      */
-    #[Override]
+    #[\Override]
     public function getRoles(): array
     {
         return [$this->role->value];
     }
 
-    #[Override]
+    #[\Override]
     public function getPassword(): string
     {
         return $this->password;

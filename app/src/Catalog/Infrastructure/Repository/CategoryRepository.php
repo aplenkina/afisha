@@ -6,9 +6,8 @@ use App\Catalog\Domain\Category;
 use App\Catalog\Domain\CategoryNotFound;
 use App\Shared\Infrastructure\Doctrine\AbstractDoctrineRepository;
 
-readonly class CategoryRepository extends AbstractDoctrineRepository  implements CategoryRepositoryInterface
+readonly class CategoryRepository extends AbstractDoctrineRepository implements CategoryRepositoryInterface
 {
-
     public function save(Category $category): void
     {
         $this->add($category);

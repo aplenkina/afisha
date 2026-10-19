@@ -3,7 +3,6 @@
 namespace App\Catalog\Domain;
 
 use App\Shared\Domain\DomainEntityConflict;
-use Override;
 
 final class EventAlreadyImported extends DomainEntityConflict
 {
@@ -17,13 +16,13 @@ final class EventAlreadyImported extends DomainEntityConflict
         parent::__construct();
     }
 
-    #[Override]
+    #[\Override]
     public function errorCode(): string
     {
         return self::CODE;
     }
 
-    #[Override]
+    #[\Override]
     protected function errorMessage(): string
     {
         return sprintf(self::MESSAGE, $this->externalId, $this->sourceId);

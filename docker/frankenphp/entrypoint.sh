@@ -1,11 +1,11 @@
-#!/bin/bash
-
+#!/bin/sh
 set -e
 
-cp /app/.env /app/.env.dev
+if [ ! -r /run/secrets/APP_SECRET ]; then
+    echo "entrypoint: не найден секрет /run/secrets/APP_SECRET" >&2
+    exit 1
+fi
 
-composer install  --no-interaction
+php -f .env.template > .env.local
 
-php -f .env.local.template > .env.local
-
-frankenphp php-server --root /app/public public/index.php
+exec docker-php-entrypoint "$@"

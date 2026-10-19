@@ -4,7 +4,6 @@ namespace App\Admin\Security;
 
 use App\Catalog\Domain\Event;
 use App\Identity\Domain\User;
-use Override;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Vote;
@@ -22,13 +21,13 @@ final class EventVoter extends Voter
     ) {
     }
 
-    #[Override]
+    #[\Override]
     protected function supports(string $attribute, mixed $subject): bool
     {
-        return $attribute === self::EDIT && $subject instanceof Event;
+        return self::EDIT === $attribute && $subject instanceof Event;
     }
 
-    #[Override]
+    #[\Override]
     protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token, ?Vote $vote = null): bool
     {
         $user = $token->getUser();

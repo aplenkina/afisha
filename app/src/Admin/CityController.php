@@ -13,9 +13,9 @@ use App\Catalog\Application\UpdateCity\UpdateCityCommand;
 use App\Catalog\Domain\CityNotFound;
 use App\Shared\Domain\DomainError;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminRoute;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[AdminRoute('/city', name: 'city')]
 #[IsGranted('ROLE_ADMIN')]
@@ -55,18 +55,18 @@ class CityController extends AbstractAdminController
         $id = $this->toInt($request->id);
 
         try {
-            if ($id === null) {
+            if (null === $id) {
                 $id = $this->dispatch(new CreateCityCommand(
                     name: $request->name,
                     slug: $this->toString($request->slug),
-                    available: $request->available !== null,
+                    available: null !== $request->available,
                 ));
             } else {
                 $this->dispatch(new UpdateCityCommand(
                     id: $id,
                     name: $request->name,
                     slug: $this->toString($request->slug) ?? $request->name,
-                    available: $request->available !== null,
+                    available: null !== $request->available,
                 ));
             }
         } catch (DomainError $error) {

@@ -60,15 +60,15 @@ class UserController extends AbstractAdminController
         $id = $this->toInt($request->id);
         $role = UserRole::tryFrom($request->role);
 
-        if ($role === null) {
+        if (null === $role) {
             $this->addFlash('danger', 'Выберите роль');
 
-            return $this->redirectToRoute($id !== null ? 'admin_user_details' : 'admin_user_new', $id !== null ? ['id' => $id] : []);
+            return $this->redirectToRoute(null !== $id ? 'admin_user_details' : 'admin_user_new', null !== $id ? ['id' => $id] : []);
         }
 
         try {
-            if ($id === null) {
-                if ($this->toString($request->password) === null) {
+            if (null === $id) {
+                if (null === $this->toString($request->password)) {
                     $this->addFlash('danger', 'Укажите пароль');
 
                     return $this->redirectToRoute('admin_user_new');
@@ -80,12 +80,12 @@ class UserController extends AbstractAdminController
                     id: $id,
                     email: $request->email,
                     role: $role,
-                    active: $request->active !== null,
+                    active: null !== $request->active,
                     plainPassword: $this->toString($request->password),
                 ));
             }
         } catch (DomainError $error) {
-            return $this->fail($error, $id !== null ? 'admin_user_details' : 'admin_user_new', $id !== null ? ['id' => $id] : []);
+            return $this->fail($error, null !== $id ? 'admin_user_details' : 'admin_user_new', null !== $id ? ['id' => $id] : []);
         }
 
         $this->addFlash('success', 'Пользователь сохранён');

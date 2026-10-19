@@ -31,12 +31,12 @@ class CategoryController extends AbstractController
     #[AdminRoute('/', name: 'index', options: ['methods' => 'GET'])]
     public function index(): Response
     {
-        /** @var $result CatalogShowResponse */
+        /** @var CatalogShowResponse $result */
         $result = $this->messageBus->dispatch(new CatalogShowQuery())->last(HandledStamp::class)->getResult();
 
         $twigResult = array_map(function ($item) {
-                    return ['id' => $item->getId(), 'name' => $item->getName(), 'alias' => $item->getAlias(), 'available' => $item->isAvailable()];
-                }, $result->categories);
+            return ['id' => $item->getId(), 'name' => $item->getName(), 'alias' => $item->getAlias(), 'available' => $item->isAvailable()];
+        }, $result->categories);
 
         return $this->render('/admin/category/index.html.twig', [
             'data' => $twigResult,
@@ -66,7 +66,7 @@ class CategoryController extends AbstractController
     #[AdminRoute('/{id<\d+>}', name: 'details', options: ['methods' => 'GET'])]
     public function details(int $id): Response
     {
-        /** @var $result GetCategoryResponse */
+        /** @var GetCategoryResponse $result */
         $result = $this->messageBus->dispatch(new GetCategoryQuery($id))->last(HandledStamp::class)->getResult();
 
         return $this->render('/admin/category/details.html.twig', [
@@ -96,5 +96,4 @@ class CategoryController extends AbstractController
 
         return $this->redirect('/admin/category');
     }
-
 }

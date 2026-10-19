@@ -3,7 +3,6 @@
 namespace App\Admin\Application\ListSources;
 
 use App\Catalog\Infrastructure\Repository\SourceRepositoryInterface;
-use App\Catalog\Infrastructure\Repository\VenueRepositoryInterface;
 use App\Shared\Bus\Command\HandlerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 

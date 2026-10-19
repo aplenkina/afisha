@@ -55,9 +55,9 @@ final readonly class UpdateEventHandler implements HandlerInterface
 
         $keptSessions = [];
         foreach ($command->sessions as $data) {
-            $session = $data->id !== null ? $event->findSession($data->id) : null;
+            $session = null !== $data->id ? $event->findSession($data->id) : null;
 
-            if ($session === null) {
+            if (null === $session) {
                 $session = $event->addSession(
                     startsAt: $data->startsAt,
                     endsAt: $data->endsAt,

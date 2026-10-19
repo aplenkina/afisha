@@ -18,7 +18,6 @@ final class CategoryRequest implements CategoryRequestInterface
             new SymfonyAssert\Type('string'),
         ])]
         public string $alias = '',
-    )
-    {
+    ) {
     }
 }
