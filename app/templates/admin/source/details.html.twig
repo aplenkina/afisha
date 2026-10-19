@@ -1,0 +1,46 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title %}
+    {% if source %}Источник: {{ source.name }}{% else %}Новый источник{% endif %}
+{% endblock %}
+
+{% block main %}
+    <form class="admin-card" action="{{ path('admin_source_save') }}" method="POST">
+        <input type="hidden" name="id" value="{{ source ? source.id : '' }}">
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="cityId">Город</label>
+            <select class="admin-form__input form-select" id="cityId" name="cityId" required>
+                <option value="">Выберите город</option>
+                {% for city in cities %}
+                    <option value="{{ city.id }}" {{ source and source.cityId == city.id ? 'selected' : '' }}>{{ city.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="name">Название</label>
+            <input type="text" class="admin-form__input form-control" id="name" name="name" value="{{ source ? source.name : '' }}" maxlength="128" required>
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="slug">Код источника</label>
+            <input type="text" class="admin-form__input form-control" id="slug" name="slug" value="{{ source ? source.slug : '' }}" maxlength="128">
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="sourceUrl">Адрес сайта</label>
+            <input type="text" class="admin-form__input form-control" id="sourceUrl" name="sourceUrl" value="{{ source ? source.externalSource : '' }}" maxlength="512" required>
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="config">Настройки сборщика (JSON)</label>
+            <textarea class="admin-form__input form-control" id="config" name="config" rows="12" maxlength="8000" spellcheck="false">{{ source and source.config ? source.config|json_encode(448) : '' }}</textarea>
+            <small class="form-text">Страницы со списком событий и соответствие разделов сайта категориям. Если поле пустое, универсальный сборщик для источника не запускается.</small>
+        </div>
+
+        <div class="admin-actions">
+            <twig:ea:Button type="submit" class="admin-btn">Сохранить</twig:ea:Button>
+        </div>
+    </form>
+{% endblock %}

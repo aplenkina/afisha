@@ -1,0 +1,22 @@
+{% extends 'site/layout.html.twig' %}
+
+{% block title %}Категории — Афиша РБ{% endblock %}
+
+{% block main %}
+    <h1 class="site-page-title">Категории</h1>
+
+    {% if categories is empty %}
+        <p class="site-muted">Категорий пока нет.</p>
+    {% else %}
+        <ul class="site-grid">
+            {% for category in categories %}
+                <li>
+                    <a class="site-card" href="{{ path('category_page', { alias: category.alias }) }}">
+                        <span class="site-card__title">{{ category.name }}</span>
+                        <span class="site-card__meta">Смотреть события →</span>
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}

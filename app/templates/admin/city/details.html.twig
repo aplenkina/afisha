@@ -1,0 +1,32 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title %}
+    {% if city %}Город: {{ city.name }}{% else %}Новый город{% endif %}
+{% endblock %}
+
+{% block main %}
+    <form class="admin-card" action="{{ path('admin_city_save') }}" method="POST">
+        <input type="hidden" name="id" value="{{ city ? city.id : '' }}">
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="name">Название</label>
+            <input type="text" class="admin-form__input form-control" id="name" name="name" value="{{ city ? city.name : '' }}" maxlength="64" required>
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="slug">Адрес в URL</label>
+            <input type="text" class="admin-form__input form-control" id="slug" name="slug" value="{{ city ? city.slug : '' }}" maxlength="64" placeholder="Заполнится из названия">
+        </div>
+
+        <div class="admin-form__field">
+            <label class="form-check">
+                <input type="checkbox" class="form-check-input" name="available" value="1" {{ city and city.available ? 'checked' : '' }}>
+                <span class="form-check-label">Показывать на сайте</span>
+            </label>
+        </div>
+
+        <div class="admin-actions">
+            <twig:ea:Button type="submit" class="admin-btn">Сохранить</twig:ea:Button>
+        </div>
+    </form>
+{% endblock %}

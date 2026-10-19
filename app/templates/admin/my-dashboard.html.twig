@@ -1,0 +1,16 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title 'Dashboard' %}
+{% block main %}
+    <div class="admin-card">
+        <p class="admin-card__text">Управление каталогом афиши.</p>
+
+        <div class="admin-actions">
+            <twig:ea:Button htmlElement="a" href="{{ path('admin_event_index') }}" class="admin-btn">События</twig:ea:Button>
+            <twig:ea:Button htmlElement="a" href="{{ path('admin_event_new') }}" icon="internal:plus" class="admin-btn">Добавить событие</twig:ea:Button>
+            {% if is_granted('ROLE_ADMIN') %}
+                <twig:ea:Button htmlElement="a" href="{{ path('admin_category_index') }}" class="admin-btn">Категории</twig:ea:Button>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,8 @@
+<header class="site-panel site-header">
+    <a class="site-logo" href="{{ path('home') }}">Афиша<span>РБ</span></a>
+
+    <nav class="site-nav" aria-label="Основное меню">
+        <a class="site-nav__link{{ app.current_route == 'home' ? ' is-active' }}" href="{{ path('home') }}">Главная</a>
+        <a class="site-nav__link{{ app.current_route starts with 'category_' ? ' is-active' }}" href="{{ path('category_index') }}">Категории</a>
+    </nav>
+</header>

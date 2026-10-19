@@ -1,0 +1,26 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title 'Пользователи' %}
+{% block main %}
+    <div class="admin-card">
+        <ul class="admin-list">
+            {% for item in users %}
+                <li class="admin-list__item">
+                    <div class="admin-list__main">
+                        <a class="admin-list__title admin-list__row-link" href="{{ path('admin_user_details', { id: item.id }) }}">{{ item.email }}</a>
+                        <span class="admin-list__meta">{{ item.role.label }}{{ item.active ? '' : ' · отключён' }}</span>
+                    </div>
+                    <div class="admin-list__actions">
+                        {% if item.id != currentId %}
+                            <twig:ea:Button htmlElement="form" action="{{ path('admin_user_delete', { id: item.id }) }}" method="DELETE" variant="danger" class="admin-btn">Удалить</twig:ea:Button>
+                        {% endif %}
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+
+        <div class="admin-actions">
+            <twig:ea:Button htmlElement="a" href="{{ path('admin_user_new') }}" icon="internal:plus" class="admin-btn">Добавить пользователя</twig:ea:Button>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,14 @@
+<h2 class="site-sidebar__title">Категории</h2>
+
+{% if categories is empty %}
+    <p class="site-muted">Категорий пока нет.</p>
+{% else %}
+    <ul class="site-categories">
+        {% for category in categories %}
+            <li>
+                <a class="site-categories__link{{ app.request.attributes.get('alias') == category.alias ? ' is-active' }}"
+                   href="{{ path('category_page', { alias: category.alias }) }}">{{ category.name }}</a>
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}

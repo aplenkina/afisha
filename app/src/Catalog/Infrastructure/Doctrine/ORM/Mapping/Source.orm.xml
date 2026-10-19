@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping">
+    <entity name="App\Catalog\Domain\Source" table="source">
+        <id name="id" type="integer">
+            <generator strategy="AUTO" />
+        </id>
+        <indexes>
+            <index name="idx_source_city_id" columns="city_id" />
+        </indexes>
+
+        <field name="cityId" type="integer" column="city_id" />
+        <field name="name" length="128" />
+        <field name="slug" length="128" />
+        <field name="sourceUrl" length="512" />
+        <field name="config" type="json" nullable="true">
+            <options>
+                <option name="jsonb">true</option>
+            </options>
+        </field>
+        <field name="available" type="boolean" />
+        <field name="createdAt" type="datetimetz_immutable" />
+        <field name="lastRunAt" type="datetimetz_immutable" column="last_run_at" nullable="true" />
+        <field name="lastRunStatus" column="last_run_status" length="16" nullable="true" />
+        <field name="lastRunSummary" type="text" column="last_run_summary" nullable="true" />
+
+    </entity>
+</doctrine-mapping>

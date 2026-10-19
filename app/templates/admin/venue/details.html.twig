@@ -1,0 +1,45 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title %}
+    {% if venue %}Площадка: {{ venue.name }}{% else %}Новая площадка{% endif %}
+{% endblock %}
+
+{% block main %}
+    <form class="admin-card" action="{{ path('admin_venue_save') }}" method="POST">
+        <input type="hidden" name="id" value="{{ venue ? venue.id : '' }}">
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="cityId">Город</label>
+            <select class="admin-form__input form-select" id="cityId" name="cityId" required>
+                <option value="">Выберите город</option>
+                {% for city in cities %}
+                    <option value="{{ city.id }}" {{ venue and venue.cityId == city.id ? 'selected' : '' }}>{{ city.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="name">Название</label>
+            <input type="text" class="admin-form__input form-control" id="name" name="name" value="{{ venue ? venue.name : '' }}" maxlength="128" required>
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="address">Адрес</label>
+            <input type="text" class="admin-form__input form-control" id="address" name="address" value="{{ venue ? venue.address : '' }}" maxlength="255" required>
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="latitude">Широта</label>
+            <input type="text" inputmode="decimal" class="admin-form__input form-control" id="latitude" name="latitude" value="{{ venue ? venue.latitude : '' }}" placeholder="53.9006">
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="longitude">Долгота</label>
+            <input type="text" inputmode="decimal" class="admin-form__input form-control" id="longitude" name="longitude" value="{{ venue ? venue.longitude : '' }}" placeholder="27.5590">
+        </div>
+
+        <div class="admin-actions">
+            <twig:ea:Button type="submit" class="admin-btn">Сохранить</twig:ea:Button>
+        </div>
+    </form>
+{% endblock %}

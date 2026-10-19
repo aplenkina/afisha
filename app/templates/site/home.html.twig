@@ -1,0 +1,9 @@
+{% extends 'site/layout.html.twig' %}
+
+{% block main %}
+    <section class="site-hero">
+        <h1 class="site-hero__title">Время развлечений!</h1>
+        <p class="site-hero__text">Концерты, кино, выставки и фестивали — выбирайте категорию и находите, куда сходить.</p>
+        <a class="site-button" href="{{ path('category_index') }}">Все категории</a>
+    </section>
+{% endblock %}

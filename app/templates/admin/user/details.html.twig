@@ -1,0 +1,43 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title %}
+    {% if user_item %}Пользователь: {{ user_item.email }}{% else %}Новый пользователь{% endif %}
+{% endblock %}
+
+{% block main %}
+    <form class="admin-card" action="{{ path('admin_user_save') }}" method="POST" autocomplete="off">
+        <input type="hidden" name="id" value="{{ user_item ? user_item.id : '' }}">
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="email">Почта</label>
+            <input type="email" class="admin-form__input form-control" id="email" name="email" value="{{ user_item ? user_item.email : '' }}" maxlength="180" required>
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="role">Роль</label>
+            <select class="admin-form__input form-select" id="role" name="role" required>
+                {% for role in roles %}
+                    <option value="{{ role.value }}" {{ user_item and user_item.role == role ? 'selected' : '' }}>{{ role.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="password">{{ user_item ? 'Новый пароль' : 'Пароль' }}</label>
+            <input type="password" class="admin-form__input form-control" id="password" name="password" minlength="8" autocomplete="new-password" {{ user_item ? '' : 'required' }} placeholder="{{ user_item ? 'Оставьте пустым, чтобы не менять' : 'Не короче 8 символов' }}">
+        </div>
+
+        {% if user_item %}
+            <div class="admin-form__field">
+                <label class="form-check">
+                    <input type="checkbox" class="form-check-input" name="active" value="1" {{ user_item.active ? 'checked' : '' }}>
+                    <span class="form-check-label">Учётная запись активна</span>
+                </label>
+            </div>
+        {% endif %}
+
+        <div class="admin-actions">
+            <twig:ea:Button type="submit" class="admin-btn">Сохранить</twig:ea:Button>
+        </div>
+    </form>
+{% endblock %}

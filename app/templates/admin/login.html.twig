@@ -1,0 +1,36 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Вход · Афиша РБ{% endblock %}
+
+{% block stylesheets %}
+    <style>
+        body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: system-ui, sans-serif; background: #f4f6f8; color: #1d2733; }
+        .login { width: min(360px, 90vw); padding: 32px; background: #fff; border: 1px solid #dde3ea; border-radius: 12px; box-sizing: border-box; }
+        .login h1 { margin: 0 0 24px; font-size: 22px; }
+        .login label { display: block; margin-bottom: 6px; font-weight: 500; }
+        .login input { width: 100%; padding: 10px 12px; margin-bottom: 18px; font-size: 16px; border: 1px solid #c3ccd6; border-radius: 6px; box-sizing: border-box; }
+        .login button { width: 100%; padding: 12px; font-size: 16px; font-weight: 600; color: #fff; background: #1a73a8; border: 0; border-radius: 6px; cursor: pointer; }
+        .login button:hover { background: #155f8f; }
+        .login .error { margin-bottom: 18px; padding: 10px 12px; color: #8a1f1f; background: #fdeaea; border-radius: 6px; }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <form class="login" method="post" action="{{ path('admin_login') }}">
+        <h1>Афиша РБ · вход</h1>
+
+        {% if error %}
+            <div class="error">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+        {% endif %}
+
+        <label for="username">Почта</label>
+        <input type="email" id="username" name="_username" value="{{ last_username }}" autocomplete="username" required autofocus>
+
+        <label for="password">Пароль</label>
+        <input type="password" id="password" name="_password" autocomplete="current-password" required>
+
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+        <button type="submit">Войти</button>
+    </form>
+{% endblock %}

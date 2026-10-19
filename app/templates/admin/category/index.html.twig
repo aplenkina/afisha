@@ -1,0 +1,35 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title 'Категории' %}
+{% block main %}
+    <div class="admin-card">
+        {% if data is empty %}
+            <p class="admin-empty">Категорий пока нет.</p>
+        {% else %}
+            <ul class="admin-list">
+                {% for category in data %}
+                    <li class="admin-list__item">
+                        <div class="admin-list__main">
+                            <a class="admin-list__title admin-list__row-link" href="{{ path('admin_category_details', { id: category.id }) }}">{{ category.name }}</a>
+                            <span class="admin-list__meta">{{ category.alias }}</span>
+                        </div>
+                        <div class="admin-list__actions">
+                            <form method="POST" action="{{ path('admin_category_availability', { id: category.id }) }}">
+                                <input type="hidden" name="available" value="0">
+                                <label class="form-check">
+                                    <input type="checkbox" class="form-check-input" name="available" value="1" {{ category.available ? 'checked' : '' }} onchange="this.form.submit()">
+                                    <span class="form-check-label">Показывать на сайте</span>
+                                </label>
+                            </form>
+                            <twig:ea:Button htmlElement="form" action="{{ path('admin_category_delete', { id: category.id }) }}" method="DELETE" variant="danger" class="admin-btn">Delete</twig:ea:Button>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <div class="admin-actions">
+            <twig:ea:Button htmlElement="a" href="{{ path('admin_category_new') }}" icon="internal:plus" class="admin-btn">Add category</twig:ea:Button>
+        </div>
+    </div>
+{% endblock %}

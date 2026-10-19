@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping">
+    <entity name="App\Catalog\Domain\City" table="city">
+        <id name="id" type="integer">
+            <generator strategy="AUTO" />
+        </id>
+        <unique-constraints>
+            <unique-constraint name="uniq_city_slug" columns="slug" />
+        </unique-constraints>
+
+        <field name="name" length="64" />
+        <field name="slug" length="64" />
+        <field name="available" type="boolean" />
+        <field name="createdAt" type="datetimetz_immutable" />
+    </entity>
+</doctrine-mapping>

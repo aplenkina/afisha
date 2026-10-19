@@ -1,0 +1,57 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% set run_labels = {ok: 'Успешно', empty: '0 событий', error: 'Ошибка'} %}
+{% set run_badges = {ok: 'text-bg-success', empty: 'text-bg-warning', error: 'text-bg-danger'} %}
+
+{% block content_title 'Источники' %}
+{% block main %}
+    <div class="admin-card">
+        <form method="GET" action="{{ path('admin_source_index') }}" class="admin-form__field">
+            <label class="admin-form__label form-label" for="city">Город</label>
+            <select class="admin-form__input form-select" id="city" name="city" onchange="this.form.submit()">
+                <option value="">Все города</option>
+                {% for city in cities %}
+                    <option value="{{ city.id }}" {{ cityId == city.id ? 'selected' : '' }}>{{ city.name }}</option>
+                {% endfor %}
+            </select>
+        </form>
+
+        {% if sources is empty %}
+            <p class="admin-empty">Источников пока нет.</p>
+        {% else %}
+            <ul class="admin-list">
+                {% for source in sources %}
+                    <li class="admin-list__item">
+                        <div class="admin-list__main">
+                            <a class="admin-list__title admin-list__row-link" href="{{ path('admin_source_details', { id: source.id }) }}">{{ source.name }}</a>
+                            <span class="admin-list__meta">{{ source.externalSource }}</span>
+                            <span class="admin-list__meta">
+                                {% if source.lastRunAt %}
+                                    Последний запуск: {{ source.lastRunAt|date('d.m.Y H:i', 'Europe/Minsk') }}
+                                    <span class="badge {{ run_badges[source.lastRunStatus] ?? 'text-bg-secondary' }}">{{ run_labels[source.lastRunStatus] ?? source.lastRunStatus }}</span>
+                                    {% if source.lastRunSummary %}· {{ source.lastRunSummary }}{% endif %}
+                                {% else %}
+                                    Ещё не запускался
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="admin-list__actions">
+                            <form method="POST" action="{{ path('admin_source_availability', { id: source.id }) }}">
+                                <input type="hidden" name="available" value="0">
+                                <label class="form-check">
+                                    <input type="checkbox" class="form-check-input" name="available" value="1" {{ source.available ? 'checked' : '' }} onchange="this.form.submit()">
+                                    <span class="form-check-label">Собирать события</span>
+                                </label>
+                            </form>
+                            <twig:ea:Button htmlElement="form" action="{{ path('admin_source_delete', { id: source.id }) }}" method="DELETE" variant="danger" class="admin-btn">Удалить</twig:ea:Button>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <div class="admin-actions">
+            <twig:ea:Button htmlElement="a" href="{{ path('admin_source_new') }}" icon="internal:plus" class="admin-btn">Добавить источник</twig:ea:Button>
+        </div>
+    </div>
+{% endblock %}

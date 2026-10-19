@@ -1,0 +1,26 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Афиша РБ{% endblock %}
+
+{% block stylesheets %}
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{ asset('styles/site.css') }}">
+{% endblock %}
+
+{% block body %}
+    <div class="site">
+        {% include 'site/_header.html.twig' %}
+
+        <div class="site-layout">
+            <aside class="site-panel site-sidebar" aria-label="Категории">
+                {% include 'site/_categories.html.twig' %}
+            </aside>
+
+            <main class="site-panel site-main">
+                {% block main %}{% endblock %}
+            </main>
+        </div>
+
+        {% include 'site/_footer.html.twig' %}
+    </div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title %}
+    {% if data.id ?? null %}
+        Категория: {{ data.name }}
+    {% else %}
+        Новая категория
+    {% endif %}
+{% endblock %}
+
+{% block main %}
+    <form class="admin-card" action="{{ path('admin_category_save') }}" method="POST">
+        <input type="hidden" name="id" value="{{ data.id ?? '' }}">
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="name">Name</label>
+            <input type="text"
+                   class="admin-form__input form-control"
+                   id="name"
+                   name="name"
+                   value="{{ data.name ?? '' }}"
+                   required
+                   placeholder="Введите название">
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="alias">Alias</label>
+            <input type="text"
+                   class="admin-form__input form-control"
+                   id="alias"
+                   name="alias"
+                   value="{{ data.alias ?? '' }}"
+                   required
+                   placeholder="Введите алиас">
+        </div>
+
+        <div class="admin-actions">
+            <twig:ea:Button type="submit" class="admin-btn">Save</twig:ea:Button>
+        </div>
+    </form>
+{% endblock %}

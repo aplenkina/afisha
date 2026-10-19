@@ -1,0 +1,171 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% set session_labels = {scheduled: 'Состоится', cancelled: 'Отменён', sold_out: 'Билетов нет'} %}
+
+{% macro session_row(index, session, venues, statuses, labels, with_status) %}
+    <div class="admin-card session-row" data-session-row>
+        <input type="hidden" name="sessions[{{ index }}][id]" value="{{ session ? session.id : '' }}">
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label">Начало</label>
+            <input type="datetime-local" class="admin-form__input form-control" name="sessions[{{ index }}][startsAt]" value="{{ session ? session.startsAt|date('Y-m-d\\TH:i', 'Europe/Minsk') : '' }}">
+        </div>
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label">Окончание</label>
+            <input type="datetime-local" class="admin-form__input form-control" name="sessions[{{ index }}][endsAt]" value="{{ session and session.endsAt ? session.endsAt|date('Y-m-d\\TH:i', 'Europe/Minsk') : '' }}">
+        </div>
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label">Площадка</label>
+            <select class="admin-form__input form-select" name="sessions[{{ index }}][venueId]">
+                <option value="">Как у события</option>
+                {% for venue in venues %}
+                    <option value="{{ venue.id }}" {{ session and session.venueId == venue.id ? 'selected' : '' }}>{{ venue.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label">Ссылка на билеты</label>
+            <input type="url" class="admin-form__input form-control" name="sessions[{{ index }}][ticketUrl]" value="{{ session ? session.ticketUrl : '' }}">
+        </div>
+        {% if with_status %}
+            <div class="admin-form__field">
+                <label class="admin-form__label form-label">Статус</label>
+                <select class="admin-form__input form-select" name="sessions[{{ index }}][status]">
+                    {% for item in statuses %}
+                        <option value="{{ item.value }}" {{ session and session.status == item ? 'selected' : '' }}>{{ labels[item.value] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        {% endif %}
+        <div class="admin-actions">
+            <button type="button" class="btn btn-secondary" data-remove-session>Убрать сеанс</button>
+        </div>
+    </div>
+{% endmacro %}
+
+{% block content_title %}
+    {% if event %}Событие: {{ event.title }}{% else %}Новое событие{% endif %}
+{% endblock %}
+
+{% block main %}
+    <form class="admin-card" action="{{ path('admin_event_save') }}" method="POST">
+        <input type="hidden" name="id" value="{{ event ? event.id : '' }}">
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="title">Название</label>
+            <input type="text" class="admin-form__input form-control" id="title" name="title" value="{{ event ? event.title : '' }}" maxlength="255" required>
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="categoryId">Категория</label>
+            <select class="admin-form__input form-select" id="categoryId" name="categoryId" required>
+                <option value="">Выберите категорию</option>
+                {% for category in categories %}
+                    <option value="{{ category.id }}" {{ event and event.categoryId == category.id ? 'selected' : '' }}>{{ category.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="cityId">Город</label>
+            <select class="admin-form__input form-select" id="cityId" name="cityId" required>
+                <option value="">Выберите город</option>
+                {% for city in cities %}
+                    <option value="{{ city.id }}" {{ event and event.cityId == city.id ? 'selected' : '' }}>{{ city.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="venueId">Площадка</label>
+            <select class="admin-form__input form-select" id="venueId" name="venueId">
+                <option value="">Не указана</option>
+                {% for venue in venues %}
+                    <option value="{{ venue.id }}" {{ event and event.venueId == venue.id ? 'selected' : '' }}>{{ venue.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="description">Описание</label>
+            <textarea class="admin-form__input form-control" id="description" name="description" rows="6">{{ event ? event.description : '' }}</textarea>
+        </div>
+
+        <div class="admin-form__field">
+            <label class="form-check">
+                <input type="checkbox" class="form-check-input" name="isFree" value="1" {{ event and event.free ? 'checked' : '' }}>
+                <span class="form-check-label">Бесплатно</span>
+            </label>
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="priceMin">Цена от, BYN</label>
+            <input type="text" inputmode="decimal" class="admin-form__input form-control" id="priceMin" name="priceMin" value="{{ event ? event.priceMin : '' }}">
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="priceMax">Цена до, BYN</label>
+            <input type="text" inputmode="decimal" class="admin-form__input form-control" id="priceMax" name="priceMax" value="{{ event ? event.priceMax : '' }}">
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="ageLimit">Возраст, от</label>
+            <input type="number" min="0" max="99" class="admin-form__input form-control" id="ageLimit" name="ageLimit" value="{{ event ? event.ageLimit : '' }}">
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="imageUrl">Ссылка на картинку</label>
+            <input type="url" class="admin-form__input form-control" id="imageUrl" name="imageUrl" value="{{ event ? event.imageUrl : '' }}">
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="sourceUrl">Ссылка на источник</label>
+            <input type="url" class="admin-form__input form-control" id="sourceUrl" name="sourceUrl" value="{{ event ? event.sourceUrl : '' }}">
+        </div>
+
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="ticketUrl">Ссылка на билеты</label>
+            <input type="url" class="admin-form__input form-control" id="ticketUrl" name="ticketUrl" value="{{ event ? event.ticketUrl : '' }}">
+        </div>
+
+        <h3 class="admin-form__label">Расписание</h3>
+        <div id="sessions">
+            {% if event %}
+                {% for session in event.sessions %}
+                    {{ _self.session_row(loop.index0, session, venues, sessionStatuses, session_labels, true) }}
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <template id="session-template">
+            {{ _self.session_row('__INDEX__', null, venues, sessionStatuses, session_labels, event is not null) }}
+        </template>
+
+        <div class="admin-actions">
+            <button type="button" class="btn btn-secondary" id="add-session">Добавить сеанс</button>
+        </div>
+
+        <div class="admin-actions">
+            <twig:ea:Button type="submit" class="admin-btn">Сохранить</twig:ea:Button>
+        </div>
+    </form>
+
+    <script>
+        (function () {
+            var container = document.getElementById('sessions');
+            var template = document.getElementById('session-template');
+            var index = container.querySelectorAll('[data-session-row]').length;
+
+            document.getElementById('add-session').addEventListener('click', function () {
+                var html = template.innerHTML.split('__INDEX__').join(String(index++));
+                container.insertAdjacentHTML('beforeend', html);
+            });
+
+            container.addEventListener('click', function (event) {
+                var button = event.target.closest('[data-remove-session]');
+                if (button) {
+                    button.closest('[data-session-row]').remove();
+                }
+            });
+        })();
+    </script>
+{% endblock %}

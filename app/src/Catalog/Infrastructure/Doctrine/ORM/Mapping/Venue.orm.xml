@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping">
+    <entity name="App\Catalog\Domain\Venue" table="venue">
+        <id name="id" type="integer">
+            <generator strategy="AUTO" />
+        </id>
+        <indexes>
+            <index name="idx_venue_city_id" columns="city_id" />
+        </indexes>
+
+        <field name="cityId" type="integer" column="city_id" />
+        <field name="name" length="128" />
+        <field name="address" length="255" />
+        <field name="latitude" type="float" nullable="true" />
+        <field name="longitude" type="float" nullable="true" />
+        <field name="createdAt" type="datetimetz_immutable" />
+    </entity>
+</doctrine-mapping>

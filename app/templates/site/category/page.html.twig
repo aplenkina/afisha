@@ -1,0 +1,55 @@
+{% extends 'site/layout.html.twig' %}
+
+{% block title %}{{ category.name }} — Афиша РБ{% endblock %}
+
+{% block main %}
+    <nav class="site-breadcrumbs" aria-label="Хлебные крошки">
+        <a href="{{ path('home') }}">Главная</a>
+        <span aria-hidden="true">/</span>
+        <a href="{{ path('category_index') }}">Категории</a>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">{{ category.name }}</span>
+    </nav>
+
+    <header class="site-category-hero">
+        <p class="site-category-hero__label">Категория</p>
+        <h1 class="site-category-hero__title">{{ category.name }}</h1>
+    </header>
+
+    {% if events is empty %}
+        <section class="site-empty-state">
+            <h2 class="site-empty-state__title">Событий пока нет</h2>
+            <p class="site-muted">Скоро здесь появятся мероприятия этой категории. А пока загляните в другие разделы.</p>
+            <a class="site-button" href="{{ path('category_index') }}">Все категории</a>
+        </section>
+    {% else %}
+        <p class="site-muted site-events-count">Ближайшие события: {{ events|length }}</p>
+        <ul class="site-events">
+            {% for event in events %}
+                <li class="site-event">
+                    <time class="site-event__date" datetime="{{ event.startsAt|date('c', 'Europe/Minsk') }}">
+                        <span class="site-event__day">{{ event.startsAt|date('d.m', 'Europe/Minsk') }}</span>
+                        <span class="site-event__time">{{ event.startsAt|date('H:i', 'Europe/Minsk') }}</span>
+                    </time>
+                    <div class="site-event__body">
+                        <h2 class="site-event__title">{{ event.title }}</h2>
+                        <p class="site-event__meta">
+                            {{ event.cityName }}{% if event.venueName %}, {{ event.venueName }}{% endif %}
+                        </p>
+                        {% if event.priceLabel %}
+                            <p class="site-event__price">{{ event.priceLabel }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="site-event__actions">
+                        {% if event.ticketUrl %}
+                            <a class="site-button" href="{{ event.ticketUrl }}" target="_blank" rel="noopener nofollow">Купить билет</a>
+                        {% endif %}
+                        {% if event.sourceUrl and event.sourceUrl != event.ticketUrl %}
+                            <a class="site-event__source" href="{{ event.sourceUrl }}" target="_blank" rel="noopener nofollow">Источник</a>
+                        {% endif %}
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}
