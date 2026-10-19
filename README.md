@@ -30,8 +30,7 @@
 cp app/.env.example app/.env
 ```
 
-Впишите в нём `DATABASE_USER` и `DATABASE_PASSWORD` **те же**, что в `docker/secrets/POSTGRES_USER.txt` и `POSTGRES_PASSWORD.txt`. Остальные значения (хост, порт и имя базы) уже подходят для Docker.
-`APP_SECRET` вписывать не нужно: при старте контейнера `app` создаёт `app/.env.local` из `docker/secrets/APP_SECRET.txt` по шаблону `app/.env.template` (файл в `.gitignore`, при каждом старте перезаписывается).
+Менять в нём ничего не нужно: хост, порт и имя базы уже подходят для Docker, а `APP_SECRET`, `DATABASE_USER` и `DATABASE_PASSWORD` при каждом старте контейнера `app` записываются из `docker/secrets` в `app/.env.local` (шаблон `app/.env.template`) и `app/.env.test.local` (шаблон `app/.env.test.template`). Оба файла в `.gitignore` и перезаписываются при старте, правьте секреты только в `docker/secrets`.
 Другие `.env`-файлы не нужны: `docker-compose.yml` в корневом `.env` не нуждается, а `app/.env.test` уже в репозитории.
 
 ### 3. Контейнеры
@@ -84,6 +83,16 @@ docker compose exec app-go ./main -notify-test
 docker compose exec app php bin/phpunit
 cd app-go && go test ./...
 ```
+
+## Проверки перед коммитом
+
+PHP-часть одной командой: cs-fixer в режиме проверки, линтеры Symfony и PHPUnit.
+
+```bash
+docker compose exec app composer check
+```
+
+Исправить форматирование автоматически: `docker compose exec app composer cs:fix`. Те же проверки (плюс `gofmt`, `go vet` и `go test` для Go) запускает GitHub Actions при каждом push в `main` и в pull request: `.github/workflows/ci.yml`.
 
 ## Часовой пояс
 

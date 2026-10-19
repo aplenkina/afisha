@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  php:
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: test
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: pdo_pgsql
+          tools: composer
+      - run: cp .env.example .env
+      - run: composer install --no-interaction --prefer-dist
+      - run: composer cs:check
+      - run: composer lint
+      - run: composer test
+
+  go:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app-go
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: app-go/go.mod
+      - run: test -z "$(gofmt -l .)"
+      - run: go vet ./...
+      - run: go test ./...

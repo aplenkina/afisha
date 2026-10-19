@@ -16,6 +16,8 @@ services:
       - ./docker/frankenphp/Caddyfile:/etc/caddy/Caddyfile:ro
     secrets:
       - APP_SECRET
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
   
   app-go:
     build:
