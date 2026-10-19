@@ -1,0 +1,25 @@
+
+###> docker/secrets ###
+docker/secrets/*
+###< docker/secrets ###
+
+###> env в корне ###
+# Symfony читает только app/.env*, compose в корневых env не нуждается.
+/.env*
+###< env в корне ###
+
+###> macOS ###
+.DS_Store
+###< macOS ###
+
+###> IDE ###
+/.idea/
+###< IDE ###
+
+###> composer ###
+/vendor/
+###< composer ###
+
+###> go ###
+/app-go/main
+###< go ###
