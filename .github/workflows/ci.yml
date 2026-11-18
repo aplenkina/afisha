@@ -20,7 +20,9 @@ jobs:
           php-version: '8.5'
           extensions: pdo_pgsql
           tools: composer
-      - run: cp .env.example .env
+      - run: |
+          cp .env.example .env
+          cp .env.test.example .env.test
       - run: composer install --no-interaction --prefer-dist
       - run: composer cs:check
       - run: composer lint

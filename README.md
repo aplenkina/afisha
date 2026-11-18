@@ -28,10 +28,11 @@
 
 ```bash
 cp app/.env.example app/.env
+cp app/.env.test.example app/.env.test
 ```
 
 Менять в нём ничего не нужно: хост, порт и имя базы уже подходят для Docker, а `APP_SECRET`, `DATABASE_USER` и `DATABASE_PASSWORD` при каждом старте контейнера `app` записываются из `docker/secrets` в `app/.env.local` (шаблон `app/.env.template`) и `app/.env.test.local` (шаблон `app/.env.test.template`). Оба файла в `.gitignore` и перезаписываются при старте, правьте секреты только в `docker/secrets`.
-Другие `.env`-файлы не нужны: `docker-compose.yml` в корневом `.env` не нуждается, а `app/.env.test` уже в репозитории.
+Тесты читают `app/.env.test`. `docker-compose.yml` использует настройки из каталога `app` и Docker secrets.
 
 ### 3. Контейнеры
 

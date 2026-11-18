@@ -74,9 +74,9 @@ Three specifics worth spelling out, because they are easy to get wrong:
 - If Doctrine ORM is installed, schema changes go through migrations
   (`bin/console make:migration`, then `doctrine:migrations:migrate`), never
   `doctrine:schema:update` or hand-written SQL.
-- `.env` is committed and holds defaults only. Real secrets belong in `.env.local`
-  (git-ignored) or the secrets vault (`bin/console secrets:set`), read via
-  `%env(...)%`.
+- Copy `.env.example` to `.env` and `.env.test.example` to `.env.test`.
+  Docker loads secrets from `docker/secrets` into ignored local environment files.
+  See the root README for setup.
 
 ## Testing
 
