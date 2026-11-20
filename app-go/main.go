@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"net/http"
@@ -26,7 +27,7 @@ import (
 	"afisha/internal/store"
 )
 
-// Один токен для User-Agent и для поиска своих правил в robots.txt.
+// userAgentToken — имя бота для User-Agent и для поиска своих правил в robots.txt.
 const userAgentToken = "AfishaRBBot"
 
 func envOrFile(name string) string {
@@ -56,10 +57,20 @@ func main() {
 	notifyTest := flag.Bool("notify-test", false, "отправить проверочное сообщение в Telegram и выйти")
 	flag.Parse()
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+
+	var output io.Writer = os.Stdout
+	if path := os.Getenv("COLLECTOR_LOG_PATH"); path != "" {
+		journal := logFile{path: path, maxBytes: 5 * 1024 * 1024, console: os.Stderr}
+		log.SetOutput(journal)
+		journal.console = os.Stdout
+		output = journal
+		if !*once && !*notifyTest {
+			go journal.maintain(ctx)
+		}
+	}
+	logger := slog.New(slog.NewTextHandler(output, nil))
 
 	pool, err := pgxpool.New(ctx, databaseURL())
 	if err != nil {
@@ -67,6 +78,7 @@ func main() {
 	}
 	defer pool.Close()
 
+	// Честный User-Agent с контактом: COLLECTOR_CONTACT=почта или адрес сайта.
 	ua := userAgentToken + "/0.1"
 	if c := os.Getenv("COLLECTOR_CONTACT"); c != "" {
 		ua += " (" + c + ")"
@@ -90,7 +102,7 @@ func main() {
 	st := store.New(pool)
 	r := &runner.Runner{
 		Store:  st,
-		Custom: map[string]collector.Collector{},
+		Custom: map[string]collector.Collector{}, // сюда регистрируются сборщики под конкретный сайт
 		Factory: func(src store.SourceRow, cityName string) (collector.Collector, error) {
 			cfg, err := jsonld.ParseConfig([]byte(src.Config))
 			if err != nil {
@@ -123,6 +135,9 @@ func serveHealth(pool *pgxpool.Pool) {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
+// schedule запускает сборщики раз в сутки в COLLECT_AT (по Минску, по умолчанию 04:00) по настенным часам.
+// Пропущенный запуск (контейнер был выключен или спал) догоняется, перезапуск после сбора ничего не запускает.
+// COLLECT_ON_START=1 — ещё и сразу при старте.
 func schedule(ctx context.Context, r *runner.Runner, st *store.Store, logger *slog.Logger) {
 	loc, err := time.LoadLocation("Europe/Minsk")
 	if err != nil {
@@ -152,7 +167,5 @@ func schedule(ctx context.Context, r *runner.Runner, st *store.Store, logger *sl
 	}
 
 	logger.Info("планировщик запущен", "daily_at", at, "zone", loc.String())
-	s.Loop(ctx, 30*time.Second, sched.ThrottleErrors(10*time.Minute, time.Now, func(err error) {
-		logger.Error("планировщик", "err", err)
-	}))
+	s.Loop(ctx, 30*time.Second, func(err error) { logger.Error("планировщик", "err", err) })
 }

@@ -1,9 +1,238 @@
-{% extends 'site/layout.html.twig' %}
+{% extends 'site/calendar_layout.html.twig' %}
 
-{% block main %}
-    <section class="site-hero">
-        <h1 class="site-hero__title">Время развлечений!</h1>
-        <p class="site-hero__text">Концерты, кино, выставки и фестивали — выбирайте категорию и находите, куда сходить.</p>
-        <a class="site-button" href="{{ path('category_index') }}">Все категории</a>
-    </section>
+{% block title %}{{ selectedCategory ? selectedCategory.name ~ ' — ' }}{{ selectedCity ? selectedCity.name ~ ' — ' }}Афиша РБ{% endblock %}
+
+{% block calendar_content %}
+    {% set weekdays = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'] %}
+    {% set months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'] %}
+        <main id="calendar-content">
+            <h1>{{ selectedCategory ? selectedCategory.name : 'Афиша города' }}{{ selectedCity ? ' · ' ~ selectedCity.name }}</h1>
+            <form class="calendar-filters" method="get" action="{{ path('home') }}">
+                <label class="calendar-search">Поиск по названию
+                    <input type="search" name="q" value="{{ search }}" maxlength="120" placeholder="Например, джаз">
+                </label>
+                {% include 'site/_calendar_select.html.twig' with {
+                    label: 'Город', name: 'city', placeholder: 'Все города',
+                    options: cities|map(city => {value: city.slug, name: city.name}),
+                    selectedValue: selectedCity ? selectedCity.slug : ''
+                } only %}
+                {% include 'site/_calendar_select.html.twig' with {
+                    label: 'Категория', name: 'category', placeholder: 'Все категории',
+                    options: categories|map(category => {value: category.alias, name: category.parent ? category.parent.name ~ ' / ' ~ category.name : category.name}),
+                    selectedValue: selectedCategory ? selectedCategory.alias : ''
+                } only %}
+                <label class="calendar-free"><input type="checkbox" name="free" value="1" {{ onlyFree ? 'checked' }}> Только бесплатно</label>
+                <fieldset>
+                    <legend>Когда</legend>
+                    {% for key, label in {today: 'Сегодня', tomorrow: 'Завтра', weekend: 'Выходные', week: 'Неделя', all: 'Все даты', custom: 'Выбрать даты'} %}
+                        <label class="calendar-period">
+                            <input type="radio" name="period" value="{{ key }}" {{ period == key ? 'checked' }}>
+                            <span>{{ label }}</span>
+                        </label>
+                    {% endfor %}
+                    <div class="calendar-date-range">
+                        {% for field in [{name: 'from', label: 'С', value: dateFrom}, {name: 'to', label: 'По', value: dateTo}] %}
+                            {% set value = field.value %}
+                            {% set iso = value matches '/^[0-9]{2}\.[0-9]{2}\.[0-9]{4}$/' ? value|slice(6, 4) ~ '-' ~ value|slice(3, 2) ~ '-' ~ value|slice(0, 2) : value %}
+                            <div class="calendar-date-field" data-date-field>
+                                <div class="calendar-date-control">
+                                    <label for="calendar-{{ field.name }}">{{ field.label }}</label>
+                                    <input type="date" id="calendar-{{ field.name }}" name="{{ field.name }}" value="{{ iso }}">
+                                </div>
+                            </div>
+                        {% endfor %}
+                        {% if dateError %}<p role="alert">{{ dateError }}</p>{% endif %}
+                    </div>
+                </fieldset>
+                <button type="submit">Показать события</button>
+            </form>
+            <div class="calendar-results" aria-live="polite">
+            {% if not dateError %}
+            {% for day, events in days %}
+                <section class="calendar-day" aria-labelledby="day-{{ day }}">
+                    <h2 id="day-{{ day }}">{{ weekdays[day|date('N', 'Europe/Minsk') - 1] }}
+                        <span>{{ day|date('j', 'Europe/Minsk') }} {{ months[day|date('n', 'Europe/Minsk') - 1] }}</span>
+                    </h2>
+                    {% include 'site/_event_grid.html.twig' with {
+                        events: events, heading: 'h3', showDate: false, showCity: not selectedCity
+                    } only %}
+                </section>
+            {% else %}
+                <section class="calendar-empty">
+                    <h2>{{ search != '' ? 'По этому запросу событий не найдено' : 'На эти даты событий пока нет' }}</h2>
+                    {% if period not in ['week', 'all'] %}
+                        <a href="{{ path(calendarRoute, calendarParams|merge(onlyFree ? {period: 'week', free: 1} : {period: 'week'})) }}">Посмотреть всю неделю</a>
+                    {% elseif selectedCity or selectedCategory or onlyFree or search != '' %}
+                        <a href="{{ path('home', {period: 'week'}) }}">Сбросить фильтры</a>
+                    {% endif %}
+                </section>
+            {% endfor %}
+            {% if page > 1 or hasNext %}
+                {% set pageParams = calendarParams|merge({period: period}) %}
+                {% if period == 'custom' %}{% set pageParams = pageParams|merge({from: dateFrom, to: dateTo}) %}{% endif %}
+                {% if onlyFree %}{% set pageParams = pageParams|merge({free: 1}) %}{% endif %}
+                <nav class="calendar-pagination" aria-label="Страницы результатов">
+                    {% if page > 1 %}<a href="{{ path(calendarRoute, pageParams|merge({page: page - 1})) }}" rel="prev">Предыдущая страница</a>{% endif %}
+                    {% if hasNext %}<a href="{{ path(calendarRoute, pageParams|merge({page: page + 1})) }}" rel="next">Следующая страница</a>{% endif %}
+                </nav>
+            {% endif %}
+            {% endif %}
+            </div>
+        </main>
+        <script>
+            (() => {
+            const initDateFields = root => root.querySelectorAll('[data-date-field]').forEach(field => {
+                const picker = field.querySelector('input');
+                if (typeof HTMLElement.prototype.showPopover !== 'function') return;
+
+                const text = document.createElement('input');
+                text.type = 'text';
+                text.maxLength = 10;
+                text.placeholder = 'дд.мм.гггг';
+                text.name = picker.name;
+                text.id = picker.id;
+                const sync = () => {
+                    text.value = picker.value.split('-').reverse().join('.');
+                };
+                sync();
+                picker.removeAttribute('name');
+                picker.removeAttribute('id');
+                picker.tabIndex = -1;
+                picker.setAttribute('aria-hidden', 'true');
+                picker.hidden = true;
+
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'calendar-picker-button';
+                button.setAttribute('aria-label', 'Открыть календарь: ' + field.querySelector('label').textContent);
+                const panel = document.createElement('div');
+                panel.popover = 'auto';
+                panel.className = 'calendar-picker-panel';
+                panel.setAttribute('role', 'group');
+                panel.setAttribute('aria-label', 'Выбор даты');
+                button.setAttribute('aria-expanded', 'false');
+                panel.addEventListener('toggle', () => button.setAttribute('aria-expanded', String(panel.matches(':popover-open'))));
+                const monthLabel = new Intl.DateTimeFormat('ru', {month: 'long', year: 'numeric'});
+                const dayLabel = new Intl.DateTimeFormat('ru', {dateStyle: 'full'});
+                let month;
+                const makeButton = (label, action) => {
+                    const item = document.createElement('button');
+                    item.type = 'button';
+                    item.textContent = label;
+                    item.addEventListener('click', action);
+                    return item;
+                };
+                const render = focus => {
+                    const year = month.getFullYear();
+                    const index = month.getMonth();
+                    const header = document.createElement('div');
+                    header.className = 'calendar-picker-header';
+                    const move = direction => {
+                        month = new Date(year, index + direction, 1);
+                        render(direction);
+                    };
+                    const previous = makeButton('‹', () => move(-1));
+                    previous.setAttribute('aria-label', 'Предыдущий месяц');
+                    const next = makeButton('›', () => move(1));
+                    next.setAttribute('aria-label', 'Следующий месяц');
+                    const title = document.createElement('strong');
+                    title.textContent = monthLabel.format(month);
+                    header.append(previous, title, next);
+                    const grid = document.createElement('div');
+                    grid.className = 'calendar-picker-days';
+                    for (const label of ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']) {
+                        const day = document.createElement('span');
+                        day.textContent = label;
+                        grid.append(day);
+                    }
+                    for (let gap = (month.getDay() + 6) % 7; gap > 0; gap--) grid.append(document.createElement('span'));
+                    for (let day = 1; day <= new Date(year, index + 1, 0).getDate(); day++) {
+                        const value = [day, index + 1, year].map(part => String(part).padStart(2, '0')).join('.');
+                        const item = makeButton(String(day), () => {
+                            text.value = value;
+                            panel.hidePopover();
+                            button.focus();
+                        });
+                        item.setAttribute('aria-label', dayLabel.format(new Date(year, index, day)));
+                        item.setAttribute('aria-pressed', String(text.value === value));
+                        grid.append(item);
+                    }
+                    panel.replaceChildren(header, grid);
+                    if (focus) (focus < 0 ? previous : next).focus();
+                };
+                button.addEventListener('click', () => {
+                    if (panel.matches(':popover-open')) {
+                        panel.hidePopover();
+                        return;
+                    }
+                    const parts = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(text.value);
+                    const today = new Date();
+                    month = parts && Number(parts[2]) >= 1 && Number(parts[2]) <= 12
+                        ? new Date(Number(parts[3]), Number(parts[2]) - 1, 1)
+                        : new Date(today.getFullYear(), today.getMonth(), 1);
+                    render();
+                    const bounds = field.getBoundingClientRect();
+                    panel.style.left = Math.max(8, Math.min(bounds.left, window.innerWidth - 298)) + 'px';
+                    panel.style.top = Math.max(8, Math.min(bounds.bottom + 6, window.innerHeight - 330)) + 'px';
+                    panel.showPopover();
+                    (panel.querySelector('[aria-pressed="true"]') ?? panel.querySelector('button')).focus();
+                });
+                picker.before(text);
+                picker.after(button, panel);
+            });
+
+            let main = document.getElementById('calendar-content');
+            let pending;
+            initDateFields(main);
+
+            async function update(url, push) {
+                pending?.abort();
+                const request = new AbortController();
+                pending = request;
+                main.setAttribute('aria-busy', 'true');
+                try {
+                    const response = await fetch(url, {signal: request.signal});
+                    if (!response.ok) throw new Error('Calendar request failed');
+                    const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+                    if (request.signal.aborted) return;
+                    const next = page.getElementById('calendar-content');
+                    if (!next) throw new Error('Calendar content missing');
+                    const focus = main.contains(document.activeElement) ? document.activeElement : null;
+                    const restoreFocus = focus?.matches('button[type="submit"]');
+                    const finalUrl = response.url || url;
+                    if (push && finalUrl !== location.href) history.pushState(null, '', finalUrl);
+                    if (!push && finalUrl !== location.href) history.replaceState(null, '', finalUrl);
+                    document.title = page.title;
+                    main.replaceWith(next);
+                    main = next;
+                    initDateFields(main);
+                    if (restoreFocus) main.querySelector('button[type="submit"]').focus({preventScroll: true});
+                } catch {
+                    if (!request.signal.aborted) location.assign(url);
+                } finally {
+                    if (pending === request) {
+                        main.removeAttribute('aria-busy');
+                        pending = null;
+                    }
+                }
+            }
+
+            document.addEventListener('submit', event => {
+                const form = event.target;
+                if (!form.matches('#calendar-content .calendar-filters')) return;
+                event.preventDefault();
+                const url = new URL(form.action);
+                const filters = new FormData(form);
+                if (filters.get('period') !== 'custom') {
+                    filters.delete('from');
+                    filters.delete('to');
+                }
+                for (const [key, value] of filters) {
+                    if (value !== '') url.searchParams.set(key, value);
+                }
+                update(url.href, true);
+            });
+            window.addEventListener('popstate', () => update(location.href, false));
+            })();
+        </script>
 {% endblock %}

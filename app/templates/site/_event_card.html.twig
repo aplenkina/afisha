@@ -1,0 +1,23 @@
+<article class="calendar-event">
+    <div class="calendar-event-content">
+        <time datetime="{{ event.startsAt|date('c', 'Europe/Minsk') }}">
+            {{ showDate ? event.startsAt|date('d.m', 'Europe/Minsk') }}
+            {{ event.startsAt|date('H:i', 'Europe/Minsk') }}
+        </time>
+        <{{ heading }} class="calendar-event-title"><a href="{{ path('event_page', {slug: event.slug}) }}">{{ event.title }}</a></{{ heading }}>
+        <p>{{ event.venueName ?? event.cityName }}{% if event.venueName and showCity %} · {{ event.cityName }}{% endif %}</p>
+        {% if event.address %}<p>{{ event.address }}</p>{% endif %}
+        <strong>{{ event.priceLabel() ?? 'Цена не указана' }}</strong>
+        {% if event.ticketUrl %}
+            <a href="{{ event.ticketUrl }}">Билеты</a>
+        {% endif %}
+        {% if event.sourceUrl and event.sourceUrl != event.ticketUrl %}
+            <a href="{{ event.sourceUrl }}">Подробнее у организатора</a>
+        {% endif %}
+    </div>
+    {% if event.imageUrl %}
+        <img src="{{ event.imageUrl }}" alt="" loading="lazy" width="76" height="76">
+    {% else %}
+        <span class="calendar-cover">{{ event.categoryName }}</span>
+    {% endif %}
+</article>

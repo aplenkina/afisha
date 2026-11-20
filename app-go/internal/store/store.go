@@ -20,6 +20,7 @@ func New(pool *pgxpool.Pool) *Store {
 	return &Store{pool: pool}
 }
 
+// NormalizeName приводит название города к ключу: нижний регистр, ё -> е.
 func NormalizeName(s string) string {
 	s = strings.ToLower(strings.TrimSpace(s))
 	return strings.ReplaceAll(s, "ё", "е")
@@ -44,6 +45,7 @@ func (s *Store) Cities(ctx context.Context) (map[string]int, error) {
 	return res, rows.Err()
 }
 
+// CategoryNames — alias категории -> название для сообщений.
 func (s *Store) CategoryNames(ctx context.Context) (map[string]string, error) {
 	rows, err := s.pool.Query(ctx, `SELECT alias, name FROM category`)
 	if err != nil {
@@ -81,6 +83,7 @@ func (s *Store) Categories(ctx context.Context) (map[string]int, error) {
 	return res, rows.Err()
 }
 
+// SourceRow — запись источника из таблицы source.
 type SourceRow struct {
 	ID        int
 	CityID    int
@@ -113,6 +116,7 @@ func (s *Store) Sources(ctx context.Context) ([]SourceRow, error) {
 
 const maxSummaryRunes = 500
 
+// RecordRun сохраняет итог запуска: его показывает админка в списке источников.
 func (s *Store) RecordRun(ctx context.Context, sourceID int, status, summary string) error {
 	if r := []rune(summary); len(r) > maxSummaryRunes {
 		summary = string(r[:maxSummaryRunes-1]) + "…"
@@ -135,13 +139,20 @@ func (s *Store) LastRunAt(ctx context.Context) (time.Time, error) {
 	return *t, nil
 }
 
-// У существующего события обновляются только цена и ссылки, чтобы не затирать правки модератора.
+// Save записывает событие черновиком. Повторный вызов не создаёт дублей:
+// событие ищется по (source_id, external_id), у существующего обновляются только цена и ссылки,
+// чтобы не затирать правки модератора. Дубль с новым сеансом возвращается в черновики.
 func (s *Store) Save(ctx context.Context, sourceID, cityID, categoryID int, e collector.Event) (created bool, err error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return false, err
 	}
 	defer tx.Rollback(ctx)
+
+	// Use the same lock as publication, which checks the saved sessions.
+	if _, err = tx.Exec(ctx, `SELECT id FROM city WHERE id = $1 FOR NO KEY UPDATE`, cityID); err != nil {
+		return false, err
+	}
 
 	var venueID *int
 	if e.VenueName != "" {
@@ -153,6 +164,7 @@ func (s *Store) Save(ctx context.Context, sourceID, cityID, categoryID int, e co
 	}
 
 	var eventID int
+	var originalID *int
 	err = tx.QueryRow(ctx, `
 		INSERT INTO event (title, slug, category_id, city_id, venue_id, price_min, price_max, is_free,
 			image_url, source_url, ticket_url, status, source_id, external_id, created_at, updated_at)
@@ -163,10 +175,10 @@ func (s *Store) Save(ctx context.Context, sourceID, cityID, categoryID int, e co
 			is_free = EXCLUDED.is_free,
 			ticket_url = EXCLUDED.ticket_url,
 			updated_at = now()
-		RETURNING id, (xmax = 0)`,
+		RETURNING id, duplicate_of_id, (xmax = 0)`,
 		e.Title, e.Slug, categoryID, cityID, venueID, e.PriceMin, e.PriceMax, e.IsFree,
 		nullable(e.ImageURL), nullable(e.SourceURL), nullable(e.TicketURL), sourceID, e.ExternalID,
-	).Scan(&eventID, &created)
+	).Scan(&eventID, &originalID, &created)
 	if err != nil {
 		return false, err
 	}
@@ -178,6 +190,28 @@ func (s *Store) Save(ctx context.Context, sourceID, cityID, categoryID int, e co
 		eventID, e.StartsAt, e.EndsAt, venueID, nullable(e.TicketURL))
 	if err != nil {
 		return false, err
+	}
+
+	if originalID != nil {
+		_, err = tx.Exec(ctx, `
+			UPDATE event source
+			SET status = 'draft', duplicate_of_id = NULL
+			FROM event original
+			WHERE source.id = $1 AND original.id = source.duplicate_of_id
+			  AND EXISTS (
+				SELECT 1 FROM event_session current_session
+				WHERE current_session.event_id = source.id AND current_session.status <> 'cancelled'
+				  AND NOT EXISTS (
+					SELECT 1 FROM event_session other
+					WHERE other.event_id = original.id AND other.status <> 'cancelled'
+					  AND other.starts_at = current_session.starts_at
+					  AND COALESCE(other.venue_id, original.venue_id)
+					      = COALESCE(current_session.venue_id, source.venue_id)
+				  )
+			  )`, eventID)
+		if err != nil {
+			return false, err
+		}
 	}
 
 	return created, tx.Commit(ctx)

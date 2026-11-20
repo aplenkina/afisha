@@ -8,12 +8,15 @@ services:
       DATABASE_HOST: postgres
       DATABASE_PORT: 5432
       DATABASE_NAME: afisha
+      AFISHA_MONITOR_REPORT_TOKEN: ${AFISHA_MONITOR_REPORT_TOKEN:-}
     working_dir: /var/www/html/app
     ports:
-      - '1910:80'
+      - '1810:80'
     volumes:
       - ./app:/var/www/html/app
       - ./docker/frankenphp/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./docker/frankenphp/request-logs.caddyfile:/etc/caddy/request-logs.caddyfile:ro
+      - app_logs:/var/www/html/app/var/log
     secrets:
       - APP_SECRET
       - POSTGRES_USER
@@ -32,6 +35,9 @@ services:
       DATABASE_PASSWORD_FILE: /run/secrets/POSTGRES_PASSWORD
       TELEGRAM_BOT_TOKEN_FILE: /run/secrets/TELEGRAM_BOT_TOKEN
       TELEGRAM_CHAT_ID_FILE: /run/secrets/TELEGRAM_CHAT_ID
+      COLLECTOR_LOG_PATH: /var/log/afisha/collector.log
+    volumes:
+      - app_logs:/var/log/afisha
     develop:
       watch:
         - action: rebuild
@@ -42,7 +48,7 @@ services:
       - TELEGRAM_BOT_TOKEN
       - TELEGRAM_CHAT_ID
     ports:
-      - '1912:8080'
+      - '1812:8080'
 
   postgres:
     build:
@@ -59,19 +65,20 @@ services:
       - POSTGRES_USER
       - POSTGRES_PASSWORD
     ports:
-      - '1911:5432'
+      - '1811:5432'
 
 secrets:
+  APP_SECRET:
+    file: docker/secrets/APP_SECRET.txt
   POSTGRES_USER:
     file: docker/secrets/POSTGRES_USER.txt
   POSTGRES_PASSWORD:
     file: docker/secrets/POSTGRES_PASSWORD.txt
   TELEGRAM_BOT_TOKEN:
-    file: docker/secrets/TELEGRAM_BOT_TOKEN.txt
+    file: docker/secrets/TELEGRAM_BOT_TOKEN
   TELEGRAM_CHAT_ID:
-    file: docker/secrets/TELEGRAM_CHAT_ID.txt
-  APP_SECRET:
-    file: docker/secrets/APP_SECRET.txt
+    file: docker/secrets/TELEGRAM_CHAT_ID
 
 volumes:
   postgres_data:
+  app_logs:

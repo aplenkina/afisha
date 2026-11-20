@@ -1,0 +1,15 @@
+.git
+**/.git
+.idea
+**/.DS_Store
+**/vendor
+app/var
+app/tests
+app/public/assets
+app/public/bundles
+app/.env.*
+app/.env
+app/config/secrets
+docker/secrets
+.env.production
+**/*.local

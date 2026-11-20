@@ -1,4 +1,16 @@
-<footer class="site-panel site-footer">
-    <p class="site-footer__copy">© {{ 'now'|date('Y') }} Афиша РБ</p>
-    <p class="site-footer__note">Развлекательные события по всей Беларуси</p>
+<footer class="site-footer">
+    <div class="site-footer__about">
+        <strong>Афиша РБ</strong>
+        <p>Календарь концертов, спектаклей, спортивных и других событий в Беларуси.</p>
+    </div>
+
+    <nav class="site-footer__nav" aria-label="Навигация в подвале">
+        <a href="{{ path('home') }}">Календарь</a>
+        <a href="{{ path('category_index') }}">Категории</a>
+    </nav>
+
+    <div class="site-footer__bottom">
+        <p>Расписание, цены и наличие билетов уточняйте у организаторов.</p>
+        <p>© {{ 'now'|date('Y', 'Europe/Minsk') }} Афиша РБ</p>
+    </div>
 </footer>

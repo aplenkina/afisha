@@ -1,0 +1,5 @@
+{% if search.error %}
+    <p class="alert alert-danger list-search__feedback" id="list-search-error" role="alert">{{ search.error }}</p>
+{% elseif search.timedOut %}
+    <p class="alert alert-warning list-search__feedback" role="status">Поиск остановлен по лимиту времени. Уточните запрос, чтобы проверить больше записей.</p>
+{% endif %}

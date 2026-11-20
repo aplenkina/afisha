@@ -16,11 +16,13 @@ type Notifier interface {
 	Send(ctx context.Context, text string)
 }
 
+// Telegram шлёт сообщение в чат; без токена только пишет в лог.
 type Telegram struct {
 	token  string
 	chatID string
 	log    *slog.Logger
 
+	// APIBase можно заменить в тестах.
 	APIBase string
 	client  *http.Client
 }
@@ -33,9 +35,11 @@ func NewTelegram(token, chatID string, log *slog.Logger) *Telegram {
 	}
 }
 
+// Configured — есть ли токен и чат для отправки.
 func (t *Telegram) Configured() bool { return t.token != "" && t.chatID != "" }
 
-// Ошибка отправки не должна ронять сбор, поэтому только пишется в лог.
+// Send не возвращает ошибку: сбой уведомления не должен ронять сбор. Но и молчать о нём нельзя,
+// поэтому всё, что пошло не так, попадает в лог.
 func (t *Telegram) Send(ctx context.Context, text string) {
 	t.log.Warn("уведомление", "text", text)
 	if !t.Configured() {
@@ -47,6 +51,7 @@ func (t *Telegram) Send(ctx context.Context, text string) {
 	}
 }
 
+// Test отправляет проверочное сообщение и возвращает ошибку, если не вышло.
 func (t *Telegram) Test(ctx context.Context) error {
 	if !t.Configured() {
 		return errors.New("telegram не настроен: нет токена или id чата")
@@ -76,11 +81,12 @@ func (t *Telegram) send(ctx context.Context, text string) error {
 		return nil
 	}
 
+	// Telegram объясняет причину в теле: «chat not found», «Unauthorized» и т.п.
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 	return fmt.Errorf("telegram ответил %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 }
 
-// net/http кладёт в ошибку полный URL, а в нём токен.
+// redact убирает токен из текста ошибки: net/http кладёт в неё полный URL, а в нём токен.
 func (t *Telegram) redact(err error) error {
 	return errors.New(strings.ReplaceAll(err.Error(), t.token, "***"))
 }

@@ -17,6 +17,8 @@ class Event extends DomainEntity
 
     private ?int $id = null;
 
+    private ?self $duplicateOf = null;
+
     public function __construct(
         private string $title,
         private string $slug,
@@ -133,6 +135,17 @@ class Event extends DomainEntity
     public function archive(): void
     {
         $this->changeStatus(EventStatus::Archived);
+    }
+
+    public function markDuplicate(?self $original = null): void
+    {
+        $this->changeStatus(EventStatus::Duplicate);
+        $this->duplicateOf = $original;
+    }
+
+    public function getDuplicateOf(): ?self
+    {
+        return $this->duplicateOf;
     }
 
     public function addSession(
@@ -284,6 +297,9 @@ class Event extends DomainEntity
     private function changeStatus(EventStatus $status): void
     {
         $this->status = $status;
+        if (EventStatus::Duplicate !== $status) {
+            $this->duplicateOf = null;
+        }
         $this->touch();
     }
 

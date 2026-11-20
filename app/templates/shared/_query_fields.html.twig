@@ -1,0 +1,5 @@
+{% for name, value in parameters %}
+    {% if value is not null and value != '' %}
+        <input type="hidden" name="{{ name }}" value="{{ value }}">
+    {% endif %}
+{% endfor %}

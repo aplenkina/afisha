@@ -1,17 +1,21 @@
 {% extends '@EasyAdmin/page/content.html.twig' %}
 
-{% set status_labels = {draft: 'Черновик', published: 'Опубликовано', rejected: 'Отклонено', archived: 'В архиве'} %}
+{% set status_labels = {draft: 'Черновик', published: 'Опубликовано', rejected: 'Отклонено', archived: 'В архиве', duplicate: 'Дубль'} %}
 
 {% block content_title 'События' %}
 {% block main %}
     <div class="admin-card">
+        {% set search = list_search() %}
+        {% set events = search.filter(events, event => [event.title, event.slug, event.id, status_labels[event.status.value], cities[event.cityId] ?? '', categories[event.categoryId] ?? '']) %}
         <form method="GET" action="{{ path('admin_event_index') }}" class="d-flex flex-wrap gap-3">
+            {% include 'shared/_query_fields.html.twig' with {parameters: search.parameters()} only %}
             <div class="admin-form__field">
                 <label class="admin-form__label form-label" for="status">Статус</label>
                 <select class="admin-form__input form-select" id="status" name="status" onchange="this.form.submit()">
                     <option value="">Все</option>
+                    <option value="unpublished" {{ statusFilter == 'unpublished' ? 'selected' }}>Не опубликовано</option>
                     {% for item in statuses %}
-                        <option value="{{ item.value }}" {{ status and status.value == item.value ? 'selected' : '' }}>{{ status_labels[item.value] }}</option>
+                        <option value="{{ item.value }}" {{ statusFilter == item.value ? 'selected' : '' }}>{{ status_labels[item.value] }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -27,8 +31,14 @@
             </div>
         </form>
 
+        {% include 'shared/_list_search_form.html.twig' with {
+            search: search, action: path('admin_event_index'), filters: {status: statusFilter, category: categoryId},
+            resetUrl: path('admin_event_index', {status: statusFilter, category: categoryId}), label: 'Поиск по событиям', placeholder: 'Название, город, категория или статус'
+        } only %}
+
+
         {% if events is empty %}
-            <p class="admin-empty">Событий пока нет.</p>
+            <p class="admin-empty">{{ search.query is not empty ? 'Совпадений не найдено.' : 'Событий пока нет.' }}</p>
         {% else %}
             <ul class="admin-list">
                 {% for event in events %}
@@ -37,27 +47,43 @@
                         <div class="admin-list__main">
                             <a class="admin-list__title admin-list__row-link" href="{{ path('admin_event_details', { id: event.id }) }}">{{ event.title }}</a>
                             <span class="admin-list__meta">
-                                {{ status_labels[event.status.value] }} · {{ cities[event.cityId] ?? '—' }} · {{ categories[event.categoryId] ?? '—' }}
+                                {% if event.status.value == 'duplicate' %}
+                                    <span class="badge text-bg-secondary">Дубль</span>
+                                {% else %}
+                                    {{ status_labels[event.status.value] }}
+                                {% endif %}
+                                · {{ cities[event.cityId] ?? '—' }} · {{ categories[event.categoryId] ?? '—' }}
                                 · сеансов: {{ sessions|length }}{% if sessions %}, ближайший {{ sessions|first.startsAt|date('d.m.Y H:i', 'Europe/Minsk') }}{% endif %}
                             </span>
                         </div>
                         <div class="admin-list__actions">
-                            {% if event.status.value != 'published' %}
-                                <form method="POST" data-keep-scroll action="{{ path('admin_event_status', { id: event.id, status: status ? status.value : '', category: categoryId }) }}">
+                            {% if is_granted('ROLE_MODERATOR') %}
+                            {% if event.status.value == 'duplicate' %}
+                                <form method="POST" data-keep-scroll action="{{ path('admin_event_status', { id: event.id, status: statusFilter, category: categoryId }) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('event-status-' ~ event.id) }}">
+                                    <input type="hidden" name="status" value="draft">
+                                    <button type="submit" class="btn btn-secondary">Вернуть в черновики</button>
+                                </form>
+                            {% elseif event.status.value != 'published' %}
+                                <form method="POST" data-keep-scroll action="{{ path('admin_event_status', { id: event.id, status: statusFilter, category: categoryId }) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('event-status-' ~ event.id) }}">
                                     <input type="hidden" name="status" value="published">
                                     <button type="submit" class="btn btn-primary">Опубликовать</button>
                                 </form>
                             {% endif %}
                             {% if event.status.value == 'draft' %}
-                                <form method="POST" data-keep-scroll action="{{ path('admin_event_status', { id: event.id, status: status ? status.value : '', category: categoryId }) }}">
+                                <form method="POST" data-keep-scroll action="{{ path('admin_event_status', { id: event.id, status: statusFilter, category: categoryId }) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('event-status-' ~ event.id) }}">
                                     <input type="hidden" name="status" value="rejected">
                                     <button type="submit" class="btn btn-secondary">Отклонить</button>
                                 </form>
                             {% elseif event.status.value == 'published' %}
-                                <form method="POST" data-keep-scroll action="{{ path('admin_event_status', { id: event.id, status: status ? status.value : '', category: categoryId }) }}">
-                                    <input type="hidden" name="status" value="archived">
-                                    <button type="submit" class="btn btn-secondary">В архив</button>
+                                <form method="POST" data-keep-scroll action="{{ path('admin_event_status', { id: event.id, status: statusFilter, category: categoryId }) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('event-status-' ~ event.id) }}">
+                                    <button type="submit" name="status" value="draft" class="btn btn-secondary">Снять с публикации</button>
+                                    <button type="submit" name="status" value="archived" class="btn btn-secondary">В архив</button>
                                 </form>
+                            {% endif %}
                             {% endif %}
                             <twig:ea:Button htmlElement="form" action="{{ path('admin_event_delete', { id: event.id }) }}" method="DELETE" variant="danger" class="admin-btn">Удалить</twig:ea:Button>
                         </div>
@@ -71,6 +97,7 @@
         </div>
     </div>
 
+    {# После смены статуса страница перезагружается; запоминаем прокрутку и возвращаемся на то же место #}
     <script>
         (function () {
             var key = 'admin_event_list_scroll';

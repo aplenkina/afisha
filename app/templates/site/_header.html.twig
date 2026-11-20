@@ -1,5 +1,5 @@
 <header class="site-panel site-header">
-    <a class="site-logo" href="{{ path('home') }}">Афиша<span>РБ</span></a>
+    {% include 'site/_brand.html.twig' with {className: 'site-logo'} only %}
 
     <nav class="site-nav" aria-label="Основное меню">
         <a class="site-nav__link{{ app.current_route == 'home' ? ' is-active' }}" href="{{ path('home') }}">Главная</a>

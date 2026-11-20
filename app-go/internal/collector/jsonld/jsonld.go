@@ -1,3 +1,5 @@
+// Package jsonld — универсальный сборщик: читает schema.org/Event из JSON-LD на страницах списка.
+// Страницы и соответствие разделов категориям берутся из source.config, кода на источник не нужно.
 package jsonld
 
 import (
@@ -24,12 +26,15 @@ var ldJSON = regexp.MustCompile(`(?is)<script[^>]*ld\+json[^>]*>(.*?)</script>`)
 var controlChars = regexp.MustCompile(`[\x00-\x1f]`)
 var descriptionSpan = regexp.MustCompile(`(?s)"description"\s*:.*?(,\s*"offers"|\}\s*$)`)
 
+// Config — содержимое source.config.
 type Config struct {
 	// Pages — пути страниц со списком событий относительно адреса источника, например "/", "/concerts/".
 	Pages []string `json:"pages"`
-	// Categories — первый сегмент пути события -> alias категории. Остальные разделы пропускаются.
-	Categories   map[string]string `json:"categories"`
-	CityFallback bool              `json:"city_fallback"`
+	// Categories — раздел URL или первый сегмент пути события -> alias категории.
+	Categories map[string]string `json:"categories"`
+	// CityFallback — событие без города в разметке привязывать к городу источника.
+	CityFallback     bool   `json:"city_fallback"`
+	DetailPathPrefix string `json:"detail_path_prefix"`
 }
 
 func ParseConfig(raw []byte) (Config, error) {
@@ -60,6 +65,7 @@ type Collector struct {
 	log                 *slog.Logger
 }
 
+// New: cityName — название города источника, нужно для city_fallback.
 func New(slug, name, baseURL, cityName string, cfg Config, client *fetch.Client, userAgent string, log *slog.Logger) *Collector {
 	return &Collector{
 		slug: slug, name: name, baseURL: strings.TrimRight(baseURL, "/"),
@@ -71,7 +77,7 @@ func (c *Collector) Slug() string    { return c.slug }
 func (c *Collector) Name() string    { return c.name }
 func (c *Collector) BaseURL() string { return c.baseURL }
 
-// Нет robots.txt — можно всё; любая другая ошибка — не собираем вслепую.
+// robots возвращает правила для нашего бота. Нет файла — можно всё; любая другая ошибка — не собираем вслепую.
 func (c *Collector) robots(ctx context.Context) (*robotstxt.Group, error) {
 	body, err := c.client.Get(ctx, c.baseURL+"/robots.txt")
 	if err != nil {
@@ -98,6 +104,8 @@ func (c *Collector) Collect(ctx context.Context) (collector.Result, error) {
 	}
 
 	seen := map[string]bool{}
+	visited := map[string]bool{}
+	now := time.Now()
 	var lastErr error
 
 	for _, p := range c.cfg.Pages {
@@ -116,7 +124,43 @@ func (c *Collector) Collect(ctx context.Context) (collector.Result, error) {
 		}
 		res.Stats.PagesLoaded++
 
-		events, stats := Parse(body, time.Now(), c.cfg)
+		section := strings.TrimPrefix(strings.Trim(p, "/"), "ru/")
+		alias := c.cfg.Categories[section]
+		events, stats := Parse(body, now, c.cfg)
+		if c.cfg.DetailPathPrefix != "" && alias != "" {
+			base, err := url.Parse(c.baseURL)
+			if err != nil {
+				return res, err
+			}
+			for _, itemURL := range listItemURLs(body) {
+				link, err := url.Parse(itemURL)
+				if err != nil {
+					continue
+				}
+				link = base.ResolveReference(link)
+				if link.Host != base.Host || link.Scheme != base.Scheme || !strings.HasPrefix(link.Path, c.cfg.DetailPathPrefix) {
+					continue
+				}
+				path := link.EscapedPath()
+				if visited[path] || (rules != nil && !rules.Test(path)) {
+					continue
+				}
+				visited[path] = true
+				detail, err := c.client.Get(ctx, c.baseURL+path)
+				if err != nil {
+					if ctx.Err() != nil {
+						return res, ctx.Err()
+					}
+					c.log.Warn("карточка не загрузилась", "source", c.slug, "page", path, "err", err)
+					continue
+				}
+				items, detailStats := parseEvents(detail, now, c.cfg, alias)
+				events = append(events, items...)
+				stats.Past += detailStats.Past
+				stats.NoCategory += detailStats.NoCategory
+				stats.Broken += detailStats.Broken
+			}
+		}
 		c.log.Info("страница разобрана", "source", c.slug, "page", p,
 			"events", len(events), "no_category", stats.NoCategory, "past", stats.Past, "broken", stats.Broken)
 		res.Stats.Past += stats.Past
@@ -146,7 +190,39 @@ type Stats struct {
 	Broken     int
 }
 
+func graphNodes(raw []byte) []json.RawMessage {
+	var graph struct {
+		Nodes []json.RawMessage `json:"@graph"`
+	}
+	if json.Unmarshal(raw, &graph) == nil && graph.Nodes != nil {
+		return graph.Nodes
+	}
+	return []json.RawMessage{raw}
+}
+
+func listItemURLs(page []byte) []string {
+	var urls []string
+	for _, script := range ldJSON.FindAllSubmatch(page, -1) {
+		for _, node := range graphNodes(script[1]) {
+			var list struct {
+				Type  string `json:"@type"`
+				Items []struct {
+					URL string `json:"url"`
+				} `json:"itemListElement"`
+			}
+			if json.Unmarshal(node, &list) != nil || list.Type != "ItemList" {
+				continue
+			}
+			for _, item := range list.Items {
+				urls = append(urls, item.URL)
+			}
+		}
+	}
+	return urls
+}
+
 type ldEvent struct {
+	Status    string `json:"eventStatus"`
 	Type      string `json:"@type"`
 	URL       string `json:"url"`
 	Name      string `json:"name"`
@@ -168,37 +244,77 @@ type ldEvent struct {
 	} `json:"offers"`
 }
 
+// Parse достаёт события из JSON-LD на странице. now нужен, чтобы отбросить прошедшие.
 func Parse(page []byte, now time.Time, cfg Config) ([]collector.Event, Stats) {
+	return parseEvents(page, now, cfg, "")
+}
+
+func parseEvents(page []byte, now time.Time, cfg Config, categoryAlias string) ([]collector.Event, Stats) {
 	var stats Stats
 	var out []collector.Event
 
 	for _, m := range ldJSON.FindAllSubmatch(page, -1) {
-		raw, err := decode(string(m[1]))
-		if err != nil {
-			stats.Broken++
-			continue
-		}
-		if raw.Type != "Event" {
-			continue
-		}
+		for _, node := range eventNodes(graphNodes(m[1])) {
+			raw, err := decode(string(node))
+			if err != nil {
+				stats.Broken++
+				continue
+			}
+			switch raw.Type {
+			case "Event", "MusicEvent", "TheaterEvent", "TheatreEvent", "DanceEvent":
+			default:
+				continue
+			}
+			if strings.HasSuffix(raw.Status, "EventCancelled") || strings.HasSuffix(raw.Status, "EventPostponed") {
+				continue
+			}
 
-		e, err := toEvent(raw, cfg.Categories)
-		if err != nil {
-			stats.Broken++
-			continue
+			e, err := toEvent(raw, cfg.Categories)
+			if err != nil {
+				stats.Broken++
+				continue
+			}
+			if e.StartsAt.Before(now) && (e.EndsAt == nil || e.EndsAt.Before(now)) {
+				stats.Past++
+				continue
+			}
+			if categoryAlias != "" {
+				e.CategoryAlias = categoryAlias
+			}
+			if e.CategoryAlias == "" {
+				stats.NoCategory++
+				continue
+			}
+			out = append(out, e)
 		}
-		if e.StartsAt.Before(now) && (e.EndsAt == nil || e.EndsAt.Before(now)) {
-			stats.Past++
-			continue
-		}
-		if e.CategoryAlias == "" {
-			stats.NoCategory++
-			continue
-		}
-		out = append(out, e)
 	}
 
 	return out, stats
+}
+
+func eventNodes(nodes []json.RawMessage) []json.RawMessage {
+	var out []json.RawMessage
+	for _, node := range nodes {
+		out = append(out, node)
+		var wrapper struct {
+			MainEntity json.RawMessage `json:"mainEntity"`
+			Items      []struct {
+				Item json.RawMessage `json:"item"`
+			} `json:"itemListElement"`
+		}
+		if json.Unmarshal(node, &wrapper) != nil {
+			continue
+		}
+		if len(wrapper.MainEntity) > 0 {
+			out = append(out, eventNodes([]json.RawMessage{wrapper.MainEntity})...)
+		}
+		for _, item := range wrapper.Items {
+			if len(item.Item) > 0 {
+				out = append(out, item.Item)
+			}
+		}
+	}
+	return out
 }
 
 // decode терпит сырые переводы строк в тексте и битые описания: описание нам не нужно.
@@ -232,6 +348,10 @@ func toEvent(r ldEvent, categories map[string]string) (collector.Event, error) {
 		return collector.Event{}, errors.New("пустой путь")
 	}
 	section := strings.SplitN(path, "/", 2)[0]
+	category := categories[section]
+	if lastSlash := strings.LastIndex(path, "/"); lastSlash >= 0 && categories[path[:lastSlash]] != "" {
+		category = categories[path[:lastSlash]]
+	}
 
 	starts, err := parseTime(r.StartDate)
 	if err != nil {
@@ -264,7 +384,7 @@ func toEvent(r ldEvent, categories map[string]string) (collector.Event, error) {
 		SourceURL:     r.URL,
 		TicketURL:     firstNonEmpty(r.Offers.URL, r.URL),
 		ImageURL:      firstImage(r.Image),
-		CategoryAlias: categories[section],
+		CategoryAlias: category,
 		CityHints:     hints,
 		VenueName:     venue,
 		Address:       strings.TrimSpace(r.Location.Address.Street),
@@ -298,6 +418,9 @@ func parseTime(s string) (time.Time, error) {
 			return t, nil
 		}
 	}
+	if t, err := time.ParseInLocation("2006-01-02T15:04:05", s, minsk); err == nil {
+		return t, nil
+	}
 	return time.ParseInLocation("2006-01-02", s, minsk)
 }
 
@@ -324,6 +447,7 @@ func firstImage(v any) string {
 	return ""
 }
 
+// cleanPrice: "1 445.00" (с пробелом или неразрывным пробелом) -> "1445.00".
 func cleanPrice(s string) string {
 	return strings.Map(func(r rune) rune {
 		if r == ' ' || r == '\u00a0' || r == '\u202f' {

@@ -47,6 +47,35 @@
 {% endblock %}
 
 {% block main %}
+    {% if event and event.status.value == 'duplicate' %}
+        <section class="admin-card" aria-label="Статус карточки">
+            <p class="mb-0"><span class="badge text-bg-secondary">Дубль</span> Карточка скрыта с сайта.
+                {% if event.duplicateOf %}
+                    <a href="{{ path('admin_event_details', {id: event.duplicateOf.id}) }}">Основная карточка</a>
+                {% endif %}
+            </p>
+        </section>
+    {% endif %}
+    {% if duplicates|default([]) is not empty %}
+        <section class="admin-card" aria-labelledby="duplicate-events-title">
+            <h2 id="duplicate-events-title">Возможные дубли</h2>
+            <p>Для каждого сеанса этой карточки у найденного события совпадают название, место, дата и время начала.</p>
+            <ul class="mb-0">
+                {% for duplicate in duplicates %}
+                    <li>
+                        <a href="{{ path('admin_event_details', {id: duplicate.id}) }}">{{ duplicate.title }}</a>
+                        · {{ duplicate.starts_at|date('d.m.Y H:i', 'Europe/Minsk') }}
+                        · {{ duplicate.status == 'published' ? 'Опубликовано' : 'Черновик' }}
+                        <form method="post" action="{{ path('admin_event_merge', {id: event.id}) }}" class="mt-2 mb-3">
+                            <input type="hidden" name="_token" value="{{ csrf_token('merge-event-' ~ event.id) }}">
+                            <input type="hidden" name="target" value="{{ duplicate.id }}">
+                            <button type="submit" class="btn btn-secondary">Пометить дублем этого события</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
     <form class="admin-card" action="{{ path('admin_event_save') }}" method="POST">
         <input type="hidden" name="id" value="{{ event ? event.id : '' }}">
 

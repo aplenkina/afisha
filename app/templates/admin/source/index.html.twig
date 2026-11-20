@@ -6,7 +6,10 @@
 {% block content_title 'Источники' %}
 {% block main %}
     <div class="admin-card">
+        {% set search = list_search() %}
+        {% set sources = search.filter(sources, source => [source.name, source.slug, source.externalSource, run_labels[source.lastRunStatus] ?? '', source.lastRunSummary]) %}
         <form method="GET" action="{{ path('admin_source_index') }}" class="admin-form__field">
+            {% include 'shared/_query_fields.html.twig' with {parameters: search.parameters()} only %}
             <label class="admin-form__label form-label" for="city">Город</label>
             <select class="admin-form__input form-select" id="city" name="city" onchange="this.form.submit()">
                 <option value="">Все города</option>
@@ -16,8 +19,14 @@
             </select>
         </form>
 
+        {% include 'shared/_list_search_form.html.twig' with {
+            search: search, action: path('admin_source_index'), filters: {city: cityId},
+            resetUrl: path('admin_source_index', {city: cityId}), label: 'Поиск по источникам', placeholder: 'Название, адрес или статус импорта'
+        } only %}
+
+
         {% if sources is empty %}
-            <p class="admin-empty">Источников пока нет.</p>
+            <p class="admin-empty">{{ search.query is not empty ? 'Совпадений не найдено.' : 'Источников пока нет.' }}</p>
         {% else %}
             <ul class="admin-list">
                 {% for source in sources %}

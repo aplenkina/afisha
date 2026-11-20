@@ -10,38 +10,42 @@ import (
 	"afisha/internal/collector"
 )
 
-// Лимит Telegram 4096 символов, оставляем запас.
+// telegramLimit — лимит Telegram на длину сообщения; оставляем запас.
 const telegramLimit = 3900
 
+// NewEvent — событие, появившееся в этом запуске.
 type NewEvent struct {
 	Title    string
 	StartsAt time.Time
 	Place    string
 }
 
+// SourceReport — всё, что произошло с одним источником за запуск.
 type SourceReport struct {
 	Slug, Name string
-	Status     string
+	Status     string // ok, empty, error
 	Err        string
 	Took       time.Duration
 	Stats      collector.Stats
 
 	Collected, Created, Updated, NoCity, NoCategory, Failed int
 
-	NewByCategory map[string]int
+	NewByCategory map[string]int // alias -> сколько новых
 	New           []NewEvent
 }
 
+// Healthy — запуск прошёл без замечаний.
 func (r SourceReport) Healthy() bool {
 	return r.Status == StatusOK && r.Failed == 0 && r.Stats.PagesFailed == 0 && r.Stats.PagesBlocked == 0
 }
 
+// Summary — итог всего запуска.
 type Summary struct {
 	Reports       []SourceReport
 	Took          time.Duration
 	At            time.Time
 	Loc           *time.Location
-	Disabled      int
+	Disabled      int // источников выключено в админке
 	NoCollector   int // включены, но настроек сборщика нет
 	CategoryNames map[string]string
 }
@@ -55,6 +59,8 @@ func (s Summary) healthy() bool {
 	return true
 }
 
+// Format собирает текст сообщения. Если не помещается в лимит Telegram, сначала сокращает списки
+// новых событий, потом режет текст целиком.
 func (s Summary) Format() string {
 	for _, maxNew := range []int{10, 5, 0} {
 		text := s.format(maxNew)

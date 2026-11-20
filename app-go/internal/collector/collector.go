@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// Event — факты о событии, которые забирает сборщик. Тексты и фото целиком не копируем.
 type Event struct {
 	ExternalID    string // не длиннее 128 символов
 	Slug          string
@@ -23,12 +24,13 @@ type Event struct {
 	IsFree        bool
 }
 
+// Stats — что сборщик увидел по дороге; попадает в итоговую сводку.
 type Stats struct {
-	PagesTotal   int
+	PagesTotal   int // страниц в настройках
 	PagesLoaded  int
 	PagesBlocked int // закрыты в robots.txt
-	PagesFailed  int
-	Past         int
+	PagesFailed  int // не загрузились
+	Past         int // прошедшие события
 	NoCategory   int // события из разделов без категории в настройках
 	Broken       int // блоки разметки, которые не разобрались
 }

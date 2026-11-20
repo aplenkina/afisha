@@ -1,0 +1,41 @@
+groups:
+  - name: server-resources
+    rules:
+      - record: afisha:cpu_busy_percent
+        expr: |
+          clamp(100 * (1 - avg without (cpu, mode) (rate(node_cpu_seconds_total{job="server",mode="idle"}[5m]))), 0, 100)
+            and (up{job="server"} == 1)
+      - record: afisha:memory_available_percent
+        expr: 100 * node_memory_MemAvailable_bytes{job="server"} / node_memory_MemTotal_bytes{job="server"}
+      - record: afisha:disk_available_percent
+        expr: |
+          100 * node_filesystem_avail_bytes{job="server"}
+            / (node_filesystem_size_bytes{job="server"} > 0)
+            and (node_filesystem_readonly{job="server"} == 0)
+      - record: afisha:server_sample_timestamp_seconds
+        expr: timestamp(node_memory_MemAvailable_bytes{job="server"}) and (up{job="server"} == 1)
+
+      - alert: AfishaDiskSpaceLow
+        expr: afisha:disk_available_percent < 15
+        for: 10m
+        annotations:
+          summary: 'Афиша РБ · На разделе {{ $labels.mountpoint }} осталось меньше 15% места'
+      - alert: AfishaMemoryLow
+        expr: afisha:memory_available_percent < 10
+        for: 10m
+        annotations:
+          summary: 'Афиша РБ · Доступно меньше 10% оперативной памяти'
+      - alert: AfishaCpuBusy
+        expr: afisha:cpu_busy_percent > 85
+        for: 15m
+        annotations:
+          summary: 'Афиша РБ · Загрузка CPU выше 85%'
+      - alert: AfishaOutOfMemory
+        expr: increase(node_vmstat_oom_kill{job="server"}[5m]) > 0
+        annotations:
+          summary: 'Афиша РБ · Система завершила процесс из-за нехватки памяти'
+      - alert: AfishaServerMetricsMissing
+        expr: up{job="server"} unless (node_memory_MemAvailable_bytes{job="server"} and (up{job="server"} == 1))
+        for: 2m
+        annotations:
+          summary: 'Афиша РБ · Метрики сервера перестали поступать'

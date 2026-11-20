@@ -34,6 +34,16 @@
                    placeholder="Введите алиас">
         </div>
 
+        <div class="admin-form__field">
+            <label class="admin-form__label form-label" for="parent-id">Родительская категория</label>
+            <select class="admin-form__input form-select" id="parent-id" name="parentId">
+                <option value="">Без родителя</option>
+                {% for parent in parents %}
+                    <option value="{{ parent.id }}" {{ (data.parentId ?? null) == parent.id ? 'selected' }}>{{ parent.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
         <div class="admin-actions">
             <twig:ea:Button type="submit" class="admin-btn">Save</twig:ea:Button>
         </div>

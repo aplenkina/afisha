@@ -11,6 +11,7 @@ import (
 
 const maxBody = 16 << 20
 
+// StatusError — сайт ответил кодом, который не лечится повтором.
 type StatusError struct {
 	URL  string
 	Code int
@@ -18,6 +19,7 @@ type StatusError struct {
 
 func (e *StatusError) Error() string { return fmt.Sprintf("GET %s: status %d", e.URL, e.Code) }
 
+// Client вежливый: честный User-Agent, пауза между запросами, повторы с нарастающей паузой.
 type Client struct {
 	http      *http.Client
 	userAgent string

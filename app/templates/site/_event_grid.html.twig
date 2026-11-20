@@ -1,0 +1,11 @@
+<div class="calendar-event-grid">
+    <ul class="calendar-events" role="list">
+        {% for event in events %}
+            <li>
+                {% include 'site/_event_card.html.twig' with {
+                    event: event, heading: heading, showDate: showDate, showCity: showCity
+                } only %}
+            </li>
+        {% endfor %}
+    </ul>
+</div>

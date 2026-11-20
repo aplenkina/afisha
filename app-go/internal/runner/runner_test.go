@@ -43,7 +43,7 @@ type recordedRun struct{ status, summary string }
 type fakeStore struct {
 	available bool
 	config    string
-	extra     []store.SourceRow
+	extra     []store.SourceRow // дополнительные источники
 	saved     []collector.Event
 	runs      []recordedRun
 	created   map[string]bool // ExternalID -> уже есть в базе

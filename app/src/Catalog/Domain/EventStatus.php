@@ -14,4 +14,5 @@ enum EventStatus: string
     case Published = 'published';
     case Rejected = 'rejected';
     case Archived = 'archived';
+    case Duplicate = 'duplicate';
 }

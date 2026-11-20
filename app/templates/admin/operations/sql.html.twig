@@ -1,0 +1,30 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title 'SQL-запросы' %}
+
+{% block page_actions %}
+    <twig:ea:Button htmlElement="a" href="{{ path('admin_sql_queries', search.parameters()) }}" class="admin-btn">Обновить</twig:ea:Button>
+{% endblock %}
+
+{% block main %}
+    <section class="admin-card" aria-label="Последние SQL-запросы Doctrine">
+        {% include 'shared/_list_search_form.html.twig' with {search: search, action: path('admin_sql_queries'), label: 'Поиск по SQL-запросам'} only %}
+        {% if queries is empty %}
+            <p class="text-body-secondary mb-0">{{ search.query is not empty ? 'Совпадений не найдено.' : 'Запросов пока нет. Откройте страницу афиши и обновите журнал.' }}</p>
+        {% else %}
+            <p class="text-body-secondary">Последние запросы Doctrine · время по Минску</p>
+            <ul class="admin-list">
+                {% for query in queries %}
+                    <li class="border-bottom py-3">
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                            <time datetime="{{ query.at|date('c', 'Europe/Minsk') }}">{{ query.at|date('d.m.Y H:i:s', 'Europe/Minsk') }}</time>
+                            <span class="text-body-secondary">{{ query.durationMs|number_format(2, ',', ' ') }} мс</span>
+                            <span class="badge {{ query.ok ? 'text-bg-success' : 'text-bg-danger' }}">{{ query.ok ? 'Выполнен' : 'Ошибка' }}</span>
+                        </div>
+                        <pre class="admin-monitor-log">{{ query.query }}</pre>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </section>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends 'site/calendar_layout.html.twig' %}
+
+{% block title %}{{ event.title }} — Афиша РБ{% endblock %}
+
+{% block calendar_content %}
+    <main class="event-detail">
+        <nav aria-label="Хлебные крошки"><a href="{{ path('home') }}">Афиша</a> / <a href="{{ path('category_page', {alias: category.alias}) }}">{{ category.name }}</a></nav>
+        <div class="event-detail-intro">
+            <div>
+                <p class="event-detail-meta">{{ city.name }} · {{ category.name }}</p>
+                <h1>{{ event.title }}</h1>
+                <strong>{{ price ?? 'Цена не указана' }}</strong>
+                {% if event.description %}<p class="event-detail-description">{{ event.description }}</p>{% endif %}
+                {% if sourceUrl %}<p><a href="{{ sourceUrl }}">Страница организатора</a></p>{% endif %}
+            </div>
+            {% if imageUrl %}<img src="{{ imageUrl }}" alt="">{% endif %}
+        </div>
+        <section aria-labelledby="event-sessions">
+            <h2 id="event-sessions">Расписание</h2>
+            {% for item in sessions %}
+                {% set session = item.session %}
+                <article class="event-session">
+                    <div>
+                        <strong><time datetime="{{ session.startsAt|date('c', 'Europe/Minsk') }}">{{ session.startsAt|date('d.m.Y, H:i', 'Europe/Minsk') }}</time></strong>
+                        {% if item.venue %}
+                            <p>{{ item.venue.name }}</p>
+                            {% if item.venue.address %}<p class="event-detail-meta">{{ item.venue.address }}</p>{% endif %}
+                        {% else %}
+                            <p>{{ city.name }} · Площадка не указана</p>
+                        {% endif %}
+                    </div>
+                    {% if session.status.value == 'cancelled' %}
+                        <span>Отменён</span>
+                    {% elseif session.status.value == 'sold_out' %}
+                        <span>Билетов нет</span>
+                    {% elseif session.startsAt < date() %}
+                        <span>Сеанс уже начался</span>
+                    {% elseif item.ticketUrl %}
+                        <a class="event-ticket" href="{{ item.ticketUrl }}">Билеты</a>
+                    {% endif %}
+                </article>
+            {% else %}
+                <p>Расписание пока не опубликовано.</p>
+            {% endfor %}
+        </section>
+    </main>
+{% endblock %}

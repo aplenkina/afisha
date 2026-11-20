@@ -3,7 +3,10 @@
 {% block content_title 'Площадки' %}
 {% block main %}
     <div class="admin-card">
+        {% set search = list_search() %}
+        {% set venues = search.filter(venues, venue => [venue.name, venue.address, venue.id]) %}
         <form method="GET" action="{{ path('admin_venue_index') }}" class="admin-form__field">
+            {% include 'shared/_query_fields.html.twig' with {parameters: search.parameters()} only %}
             <label class="admin-form__label form-label" for="city">Город</label>
             <select class="admin-form__input form-select" id="city" name="city" onchange="this.form.submit()">
                 <option value="">Все города</option>
@@ -13,8 +16,14 @@
             </select>
         </form>
 
+        {% include 'shared/_list_search_form.html.twig' with {
+            search: search, action: path('admin_venue_index'), filters: {city: cityId},
+            resetUrl: path('admin_venue_index', {city: cityId}), label: 'Поиск по площадкам', placeholder: 'Название или адрес'
+        } only %}
+
+
         {% if venues is empty %}
-            <p class="admin-empty">Площадок пока нет.</p>
+            <p class="admin-empty">{{ search.query is not empty ? 'Совпадений не найдено.' : 'Площадок пока нет.' }}</p>
         {% else %}
             <ul class="admin-list">
                 {% for venue in venues %}

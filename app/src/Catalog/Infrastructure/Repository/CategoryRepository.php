@@ -27,7 +27,9 @@ readonly class CategoryRepository extends AbstractDoctrineRepository implements 
 
         if ($onlyAvailable) {
             $queryBuilder
+                ->leftJoin('c.parent', 'parent')
                 ->where($queryBuilder->expr()->eq('c.available', ':available'))
+                ->andWhere('c.parent IS NULL OR parent.available = :available')
                 ->setParameter('available', true);
         }
 
@@ -46,7 +48,12 @@ readonly class CategoryRepository extends AbstractDoctrineRepository implements 
     {
         $criteria = $onlyAvailable ? ['alias' => $alias, 'available' => true] : ['alias' => $alias];
 
-        return $this->repository(Category::class)->findOneBy($criteria) ?? throw new CategoryNotFound($alias);
+        $category = $this->repository(Category::class)->findOneBy($criteria);
+        if (null === $category || ($onlyAvailable && false === $category->getParent()?->isAvailable())) {
+            throw new CategoryNotFound($alias);
+        }
+
+        return $category;
     }
 
     public function count(): int

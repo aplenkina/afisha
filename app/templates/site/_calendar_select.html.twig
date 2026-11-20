@@ -1,0 +1,11 @@
+<label class="calendar-select">
+    <span>{{ label }}</span>
+    <span class="calendar-select-control">
+        <select name="{{ name }}">
+            <option value="">{{ placeholder }}</option>
+            {% for option in options %}
+                <option value="{{ option.value }}" {{ selectedValue == option.value ? 'selected' }}>{{ option.name }}</option>
+            {% endfor %}
+        </select>
+    </span>
+</label>

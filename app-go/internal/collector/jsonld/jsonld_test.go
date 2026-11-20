@@ -12,6 +12,23 @@ var testConfig = Config{Categories: map[string]string{
 	"raznoe":            "workshop",
 }}
 
+func TestParseNestedMusicEvent(t *testing.T) {
+	page := []byte(`<script type="application/ld+json">
+	{"@type":"CollectionPage","mainEntity":{"@type":"ItemList","itemListElement":[
+		{"@type":"ListItem","item":{"@type":"MusicEvent","name":"Концерт","url":"https://hubl.by/minsk/koncerty/concert","startDate":"2026-11-21T18:00:00+03:00","location":{"name":"Зал","address":{"addressLocality":"Минск"}},"offers":{"lowPrice":"25.00"}}},
+		{"@type":"ListItem","item":{"@type":"MusicEvent","name":"Отменён","url":"https://hubl.by/minsk/koncerty/cancelled","startDate":"2026-11-21T18:00:00+03:00","eventStatus":"https://schema.org/EventCancelled"}}
+	]}}</script>`)
+	cfg := Config{Categories: map[string]string{"minsk/koncerty": "concert"}}
+	events, stats := Parse(page, time.Date(2026, 11, 20, 0, 0, 0, 0, time.UTC), cfg)
+	if len(events) != 1 || stats != (Stats{}) {
+		t.Fatalf("ожидали одно событие: events=%d stats=%+v", len(events), stats)
+	}
+	event := events[0]
+	if event.CategoryAlias != "concert" || event.VenueName != "Зал" || event.PriceMin == nil || *event.PriceMin != "25.00" {
+		t.Fatalf("неверные данные концерта: %+v", event)
+	}
+}
+
 func TestParse(t *testing.T) {
 	page, err := os.ReadFile("testdata/list.html")
 	if err != nil {

@@ -5,6 +5,7 @@
 {% block stylesheets %}
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="{{ asset('styles/site.css') }}">
+    <link rel="stylesheet" href="{{ asset('styles/footer.css') }}">
 {% endblock %}
 
 {% block body %}
@@ -21,6 +22,6 @@
             </main>
         </div>
 
-        {% include 'site/_footer.html.twig' %}
+        {% include 'site/_footer.html.twig' only %}
     </div>
 {% endblock %}

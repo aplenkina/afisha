@@ -20,6 +20,9 @@
             </options>
         </field>
         <field name="createdAt" type="datetimetz_immutable" />
+        <many-to-one field="parent" target-entity="App\Catalog\Domain\Category">
+            <join-column name="parent_id" referenced-column-name="id" nullable="true" on-delete="SET NULL" />
+        </many-to-one>
 
     </entity>
 </doctrine-mapping>

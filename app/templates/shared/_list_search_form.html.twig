@@ -1,0 +1,9 @@
+<form class="list-search" role="search" aria-label="Поиск по списку" action="{{ action }}" method="get">
+    {% include 'shared/_query_fields.html.twig' with {parameters: filters|default({})} only %}
+    {% include 'shared/_list_search_fields.html.twig' %}
+    <button class="btn btn-primary admin-btn list-search__submit" type="submit">Найти</button>
+    {% if search.query is not empty or search.regex %}
+        <a class="btn btn-secondary list-search__reset" href="{{ resetUrl|default(action) }}">Сбросить</a>
+    {% endif %}
+</form>
+{% include 'shared/_list_search_feedback.html.twig' %}

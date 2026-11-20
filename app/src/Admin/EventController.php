@@ -16,6 +16,7 @@ use App\Catalog\Application\ChangeEventStatus\ChangeEventStatusCommand;
 use App\Catalog\Application\CreateEvent\CreateEventCommand;
 use App\Catalog\Application\CreateEvent\CreateEventSession;
 use App\Catalog\Application\DeleteEvent\DeleteEventCommand;
+use App\Catalog\Application\MergeDuplicateEvents\MergeDuplicateEvents;
 use App\Catalog\Application\ShowCatalog\CatalogShowQuery;
 use App\Catalog\Application\ShowCatalog\CatalogShowResponse;
 use App\Catalog\Application\UpdateEvent\UpdateEventCommand;
@@ -24,6 +25,7 @@ use App\Catalog\Domain\Event;
 use App\Catalog\Domain\EventNotFound;
 use App\Catalog\Domain\EventStatus;
 use App\Catalog\Domain\SessionStatus;
+use App\Catalog\Infrastructure\Repository\EventRepositoryInterface;
 use App\Identity\Domain\User;
 use App\Shared\Domain\DomainError;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminRoute;
@@ -39,17 +41,18 @@ class EventController extends AbstractAdminController
     #[AdminRoute('/', name: 'index', options: ['methods' => 'GET'])]
     public function index(Request $request): Response
     {
-        $status = EventStatus::tryFrom($request->query->getString('status'));
+        $statusFilter = $request->query->getString('status');
+        $status = EventStatus::tryFrom($statusFilter);
         $categoryId = $this->toInt($request->query->getString('category'));
 
         $createdBy = $this->isGranted('ROLE_MODERATOR') ? null : $this->currentUserId();
 
         /** @var ListEventsResponse $result */
-        $result = $this->dispatch(new ListEventsQuery($status, $createdBy, $categoryId));
+        $result = $this->dispatch(new ListEventsQuery($status, $createdBy, $categoryId, onlyUnpublished: 'unpublished' === $statusFilter));
 
         return $this->render('/admin/event/index.html.twig', [
             'events' => $result->events,
-            'status' => $status,
+            'statusFilter' => 'unpublished' === $statusFilter ? $statusFilter : ($status?->value ?? ''),
             'categoryId' => $categoryId,
             'statuses' => EventStatus::cases(),
             'cities' => $this->namesById($this->cities()),
@@ -64,7 +67,7 @@ class EventController extends AbstractAdminController
     }
 
     #[AdminRoute('/{id<\d+>}', name: 'details', options: ['methods' => 'GET'])]
-    public function details(int $id): Response
+    public function details(int $id, EventRepositoryInterface $events): Response
     {
         try {
             /** @var GetEventResponse $result */
@@ -75,7 +78,11 @@ class EventController extends AbstractAdminController
 
         $this->denyAccessUnlessGranted(EventVoter::EDIT, $result->event);
 
-        return $this->render('/admin/event/details.html.twig', ['event' => $result->event] + $this->formOptions());
+        $duplicates = $this->isGranted('ROLE_MODERATOR') && in_array($result->event->getStatus(), [EventStatus::Draft, EventStatus::Published], true)
+            ? $events->findDuplicateCandidates($id)
+            : [];
+
+        return $this->render('/admin/event/details.html.twig', ['event' => $result->event, 'duplicates' => $duplicates] + $this->formOptions());
     }
 
     #[AdminRoute('/save', name: 'save', options: ['methods' => 'POST'])]
@@ -138,6 +145,10 @@ class EventController extends AbstractAdminController
     #[IsGranted('ROLE_MODERATOR')]
     public function status(int $id, Request $request): Response
     {
+        if (!$this->isCsrfTokenValid('event-status-'.$id, $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException();
+        }
+
         $status = EventStatus::tryFrom($request->request->getString('status'));
 
         if (null === $status) {
@@ -145,8 +156,11 @@ class EventController extends AbstractAdminController
         }
 
         try {
-            $this->dispatch(new ChangeEventStatusCommand($id, $status));
-        } catch (DomainError $error) {
+            $result = $this->dispatch(new ChangeEventStatusCommand($id, $status));
+            if (EventStatus::Published === $status && EventStatus::Duplicate === $result) {
+                $this->addFlash('success', 'Карточка помечена как дубль и скрыта с сайта.');
+            }
+        } catch (DomainError|\InvalidArgumentException $error) {
             return $this->fail($error, 'admin_event_index');
         }
 
@@ -154,6 +168,26 @@ class EventController extends AbstractAdminController
             'status' => $request->query->getString('status'),
             'category' => $request->query->getString('category'),
         ], static fn (string $value): bool => '' !== $value));
+    }
+
+    #[AdminRoute('/{id<\d+>}/merge', name: 'merge', options: ['methods' => 'POST'])]
+    #[IsGranted('ROLE_MODERATOR')]
+    public function merge(int $id, Request $request, MergeDuplicateEvents $merger): Response
+    {
+        if (!$this->isCsrfTokenValid('merge-event-'.$id, $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $targetId = $request->request->getInt('target');
+        try {
+            $merger->merge($id, $targetId);
+        } catch (\InvalidArgumentException|EventNotFound $error) {
+            return $this->fail($error, 'admin_event_details', ['id' => $id]);
+        }
+
+        $this->addFlash('success', 'Карточка помечена как дубль и скрыта с сайта.');
+
+        return $this->redirectToRoute('admin_event_details', ['id' => $targetId]);
     }
 
     #[AdminRoute('/{id<\d+>}', name: 'delete', options: ['methods' => 'DELETE'])]

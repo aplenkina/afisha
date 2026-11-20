@@ -9,12 +9,15 @@ use App\Catalog\Application\CreateCategory\CreateCategoryCommand;
 use App\Catalog\Application\DeleteCategory\DeleteCategoryCommand;
 use App\Catalog\Application\ShowCatalog\CatalogShowQuery;
 use App\Catalog\Application\ShowCatalog\CatalogShowResponse;
+use App\Catalog\Domain\CategoryNotFound;
+use App\Catalog\Infrastructure\Repository\CategoryRepositoryInterface;
 use App\Catalog\Infrastructure\Repository\CategoryRequest;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminRoute;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\Messenger\Exception\HandlerFailedException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\Stamp\HandledStamp;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -25,6 +28,7 @@ class CategoryController extends AbstractController
 {
     public function __construct(
         private MessageBusInterface $messageBus,
+        private CategoryRepositoryInterface $categories,
     ) {
     }
 
@@ -46,11 +50,26 @@ class CategoryController extends AbstractController
     #[AdminRoute('/save', name: 'save', options: ['methods' => 'POST'])]
     public function create(#[MapRequestPayload] CategoryRequest $categoryRequest): Response
     {
-        $this->messageBus->dispatch(new CreateCategoryCommand(
-            id: $categoryRequest->id ? (int) $categoryRequest->id : null,
-            name: $categoryRequest->name,
-            alias: $categoryRequest->alias,
-        ));
+        $id = $categoryRequest->id ? (int) $categoryRequest->id : null;
+        try {
+            $this->messageBus->dispatch(new CreateCategoryCommand(
+                id: $id,
+                name: $categoryRequest->name,
+                alias: $categoryRequest->alias,
+                parentId: $categoryRequest->parentId ? (int) $categoryRequest->parentId : null,
+            ));
+        } catch (HandlerFailedException $exception) {
+            $reason = $exception->getPrevious();
+            if (!$reason instanceof \InvalidArgumentException && !$reason instanceof CategoryNotFound) {
+                throw $exception;
+            }
+
+            $this->addFlash('danger', $reason->getMessage());
+
+            return null === $id
+                ? $this->redirectToRoute('admin_category_new')
+                : $this->redirectToRoute('admin_category_details', ['id' => $id]);
+        }
 
         return $this->redirect('/admin/category');
     }
@@ -60,6 +79,7 @@ class CategoryController extends AbstractController
     {
         return $this->render('/admin/category/details.html.twig', [
             'data' => [],
+            'parents' => $this->parentOptions(),
         ]);
     }
 
@@ -74,8 +94,22 @@ class CategoryController extends AbstractController
                 'id' => $result->category->getId(),
                 'name' => $result->category->getName(),
                 'alias' => $result->category->getAlias(),
+                'parentId' => $result->category->getParent()?->getId(),
             ],
+            'parents' => $this->parentOptions($id),
         ]);
+    }
+
+    private function parentOptions(?int $id = null): array
+    {
+        $parents = [];
+        foreach ($this->categories->findAll() as $category) {
+            if (null === $category->getParent() && $category->getId() !== $id) {
+                $parents[] = $category;
+            }
+        }
+
+        return $parents;
     }
 
     #[AdminRoute('/{id<\d+>}/availability', name: 'availability', options: ['methods' => 'POST'])]

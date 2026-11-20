@@ -1,6 +1,7 @@
 doctrine:
     dbal:
         driver: pdo_pgsql
+        logging: false
         server_version: '18'
         dbname: '%env(resolve:DATABASE_NAME)%'
         host: '%env(resolve:DATABASE_HOST)%'
@@ -24,6 +25,12 @@ doctrine:
                 dir: '%kernel.project_dir%/src/Identity/Infrastructure/Doctrine/ORM/Mapping'
                 prefix: 'App\Identity\Domain'
                 alias: 'Identity'
+            Telegram:
+                type: xml
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Telegram/Infrastructure/Doctrine/ORM/Mapping'
+                prefix: 'App\Telegram\Domain'
+                alias: 'Telegram'
 
 when@test:
     doctrine:

@@ -403,20 +403,6 @@ body {
     color: var(--site-muted);
 }
 
-.site-footer {
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 8px 24px;
-    padding: 16px var(--site-gap);
-    font-size: 14px;
-    color: var(--site-muted);
-}
-
-.site-footer p {
-    margin: 0;
-}
-
 .site a:focus-visible {
     outline: 2px solid var(--site-accent);
     outline-offset: 2px;

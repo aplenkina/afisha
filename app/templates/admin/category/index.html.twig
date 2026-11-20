@@ -3,8 +3,15 @@
 {% block content_title 'Категории' %}
 {% block main %}
     <div class="admin-card">
+        {% set search = list_search() %}
+        {% set data = search.filter(data, category => [category.name, category.alias, category.id]) %}
+        {% include 'shared/_list_search_form.html.twig' with {
+            search: search, action: path('admin_category_index'), filters: {},
+            resetUrl: path('admin_category_index', {}), label: 'Поиск по категориям', placeholder: 'Название или адрес категории'
+        } only %}
+
         {% if data is empty %}
-            <p class="admin-empty">Категорий пока нет.</p>
+            <p class="admin-empty">{{ search.query is not empty ? 'Совпадений не найдено.' : 'Категорий пока нет.' }}</p>
         {% else %}
             <ul class="admin-list">
                 {% for category in data %}

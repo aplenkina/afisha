@@ -1,5 +1,12 @@
 # AGENTS.md
 
+## Workflow with the user
+
+- For any user request that requires action, first present a concise plan
+  in Russian describing what needs to be done. This applies to investigations,
+  checks, edits, deployments, and other actions. Wait for the user's explicit
+  approval of the plan before starting the requested work.
+
 This is a Symfony project. Check `composer.json` for the exact Symfony/PHP version
 in use, and read `symfony.lock` to see which recipes ran. Don't assume Doctrine,
 Twig, API Platform, Messenger, or Lock are installed unless one of those says so.
@@ -74,9 +81,9 @@ Three specifics worth spelling out, because they are easy to get wrong:
 - If Doctrine ORM is installed, schema changes go through migrations
   (`bin/console make:migration`, then `doctrine:migrations:migrate`), never
   `doctrine:schema:update` or hand-written SQL.
-- Copy `.env.example` to `.env` and `.env.test.example` to `.env.test`.
-  Docker loads secrets from `docker/secrets` into ignored local environment files.
-  See the root README for setup.
+- `.env` is committed and holds defaults only. Real secrets belong in `.env.local`
+  (git-ignored) or the secrets vault (`bin/console secrets:set`), read via
+  `%env(...)%`.
 
 ## Testing
 
@@ -106,3 +113,47 @@ things up in the project instead of relying on memory:
 - Read the installed source and docblocks under `vendor/`.
 - Docs: https://symfony.com/doc/current/ (switch to the version matching
   `composer.json` if it differs).
+
+## Events and calendar
+
+- The homepage shows one card per event on each Minsk calendar day with an
+  upcoming, non-cancelled session. When several sessions fall on the same day,
+  the card uses the first upcoming session and its ticket link. All cards for
+  the same event link to its detail page, which shows the full schedule.
+- The homepage defaults to the nearest weekend. The «Все даты» filter shows
+  upcoming events across all dates and supports pagination.
+- Before marking a card as a duplicate, match the title (ignoring case and
+  extra whitespace), venue, start date and start time for every non-cancelled
+  session on that card. A missing venue cannot establish a match. Use the same
+  rule for publication, moderator selection and the batch command.
+- Marking a duplicate keeps both schedules intact. If the collector imports an
+  unmatched session into a linked duplicate, it restores that card to draft
+  for review. Existing duplicate statuses are preserved during deployment.
+
+## Operations and monitoring
+
+- `/admin/operations` shows current PostgreSQL and import checks, the latest
+  external monitor report, and up to 100 recent entries per PHP and Go journal.
+  `/admin/sql-queries` shows recent Doctrine SQL templates, execution times, and
+  results. Both pages require `ROLE_ADMIN`. The SQL journal masks literals and
+  omits bound values. SQL entries are displayed on the SQL page.
+- PHP and Go journals and the latest external report live in the shared Docker
+  volume `app_logs`. Journals rotate daily and at 5 MiB, with up to seven backups
+  per journal. Caddy expires backups after seven days at rotation. Go checks for
+  expired files at startup and hourly. SQL shares the PHP retention policy.
+- The Cloudflare Worker in `docker/monitor/worker.mjs` checks the public site,
+  `/healthz`, and `/healthz/import` every five minutes. It publishes to
+  `POST /healthz/report` using `AFISHA_MONITOR_REPORT_TOKEN`, which must match on
+  the app and Worker. Reports become stale after 15 minutes. See
+  [Monitoring in DEPLOY.md](../DEPLOY.md#мониторинг) for configuration.
+- Production release `2026-11-20-calendar` includes the operations pages, the
+  per-day calendar and the exact duplicate rule. The deployed Compose files
+  are in `/opt/afisha-rb/releases/2026-11-20-calendar` and use the production
+  environment file at `/opt/afisha-rb/.env.production`.
+- During the 2026-11-20 IP migration, the server acquired its new public
+  address at 17:24 Minsk time and restarted again at 17:27. HTTPS and both
+  public health checks passed on the new address after the migration.
+- At the post-migration check, production had no external report token or
+  saved external report. Telegram alerts are independent of the report token.
+  Use Cloudflare execution logs and Telegram delivery results to confirm
+  alert delivery.

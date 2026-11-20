@@ -1,0 +1,29 @@
+{
+	frankenphp
+
+	log php_console {
+		include frankenphp http.handlers.php
+		output stderr
+	}
+	log php_journal {
+		include frankenphp http.handlers.php
+		output file /var/www/html/app/var/log/php.log {
+			roll_size 5MiB
+			roll_at 00:00
+			roll_keep 7
+			roll_keep_for 168h
+			roll_uncompressed
+		}
+		format json
+	}
+}
+
+{$SITE_ADDRESS} {
+	import request-logs.caddyfile
+	root * /var/www/html/app/public
+	encode zstd gzip
+	request_body /healthz/report {
+		max_size 1KiB
+	}
+	php_server
+}

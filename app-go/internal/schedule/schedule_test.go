@@ -79,15 +79,17 @@ func TestRunsAgainNextDay(t *testing.T) {
 	}
 }
 
+// Сценарий из жизни: Mac проспал ночь, контейнер «проснулся» в 12:56 и увидел, что сегодня сбора не было.
 func TestCatchesUpMissedRunWhenStartedLate(t *testing.T) {
 	f := newFixture(at(18, 12, 56))
-	f.dbLast = at(17, 17, 28)
+	f.dbLast = at(17, 17, 28) // вчерашний запуск
 
 	if !f.tick(t) {
 		t.Fatal("пропущенный запуск должен догоняться")
 	}
 }
 
+// Перезапуск контейнера днём не должен вызывать лишний прогон, если сегодня уже собирали.
 func TestRestartAfterTodaysRunDoesNotRunAgain(t *testing.T) {
 	f := newFixture(at(18, 17, 0))
 	f.dbLast = at(18, 4, 0).Add(2 * time.Minute)
@@ -98,6 +100,7 @@ func TestRestartAfterTodaysRunDoesNotRunAgain(t *testing.T) {
 }
 
 func TestUsesWallClockNotElapsedTime(t *testing.T) {
+	// «Mac проспал 9 часов»: между тиками настенное время ушло с 22:58 на 09:28 следующего дня.
 	f := newFixture(at(17, 22, 58))
 	f.dbLast = at(17, 17, 28)
 	if f.tick(t) {
@@ -122,7 +125,7 @@ func TestDBErrorSkipsTickInsteadOfRunning(t *testing.T) {
 
 func TestMarkRanPreventsRunRightAfterStartupRun(t *testing.T) {
 	f := newFixture(at(18, 17, 0))
-	f.sched.MarkRan(f.now)
+	f.sched.MarkRan(f.now) // COLLECT_ON_START
 
 	if f.tick(t) {
 		t.Error("после запуска при старте второй не нужен")

@@ -19,6 +19,19 @@ final readonly class CreateCategoryHandler implements HandlerInterface
 
     public function __invoke(CreateCategoryCommand $command): void
     {
+        $parent = null === $command->parentId ? null : $this->categoryRepository->findById($command->parentId);
+        if (null !== $parent) {
+            if ($parent->getId() === $command->id || null !== $parent->getParent()) {
+                throw new \InvalidArgumentException('Можно выбрать только другую категорию верхнего уровня.');
+            }
+            if (null !== $command->id) {
+                foreach ($this->categoryRepository->findAll() as $item) {
+                    if ($item->getParent()?->getId() === $command->id) {
+                        throw new \InvalidArgumentException('Перемести подкатегории, прежде чем менять родителя.');
+                    }
+                }
+            }
+        }
         if (null !== $command->id) {
             $category = $this->categoryRepository->findById($command->id);
             $category->update(
@@ -33,6 +46,7 @@ final readonly class CreateCategoryHandler implements HandlerInterface
             );
         }
 
+        $category->setParent($parent);
         $this->categoryRepository->save($category);
 
         $this->flusher->flush();

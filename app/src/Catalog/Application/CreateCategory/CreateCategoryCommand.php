@@ -10,6 +10,7 @@ final readonly class CreateCategoryCommand implements CommandInterface
         public ?int $id,
         public string $name,
         public string $alias,
+        public ?int $parentId = null,
     ) {
     }
 }

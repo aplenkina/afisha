@@ -1,0 +1,104 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title 'Мониторинг и журналы' %}
+
+{% block page_actions %}
+    <twig:ea:Button htmlElement="a" href="{{ path('admin_operations', search.parameters()) }}" class="admin-btn">Обновить</twig:ea:Button>
+{% endblock %}
+
+{% block main %}
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-lg-6">
+            <section class="admin-card h-100 mt-0" aria-labelledby="local-health">
+                <h2 id="local-health" class="h5">Внутренние проверки</h2>
+                <dl class="admin-monitor-checks">
+                    <dt>PostgreSQL</dt>
+                    <dd>{{ _self.status(database, 'Доступна', 'Сбой') }}</dd>
+                    <dt>Импорт событий</dt>
+                    <dd>{{ _self.status(import, 'Актуален', 'Сбой или устарел') }}</dd>
+                </dl>
+                <p class="text-body-secondary mb-0">Проверено {{ _self.timestamp(localCheckedAt) }}</p>
+            </section>
+        </div>
+        <div class="col-12 col-lg-6">
+            <section class="admin-card h-100 mt-0" aria-labelledby="external-health">
+                <h2 id="external-health" class="h5">Внешнее наблюдение</h2>
+                {% if external is null %}
+                    <p class="text-body-secondary mb-0">Отчёты от внешней проверки пока не поступали.</p>
+                {% else %}
+                    {% if external.stale %}
+                        <p><span class="badge text-bg-warning">Данные устарели</span></p>
+                    {% endif %}
+                    <dl class="admin-monitor-checks">
+                        <dt>Доступность сайта</dt>
+                        <dd>{{ _self.status(external.siteHealthy, 'Доступен', 'Недоступен') }}</dd>
+                        <dt>Импорт событий</dt>
+                        <dd>{{ _self.status(external.importHealthy, 'Актуален', 'Сбой или устарел') }}</dd>
+                    </dl>
+                    <p class="text-body-secondary mb-0">Отчёт получен {{ _self.timestamp(external.receivedAt) }}</p>
+                    {% if external.lastSiteFailureAt %}
+                        <p class="text-body-secondary mb-0">Последний зафиксированный сбой {{ _self.timestamp(external.lastSiteFailureAt) }}</p>
+                    {% endif %}
+                {% endif %}
+            </section>
+        </div>
+    </div>
+
+    <section class="admin-card mb-3" aria-labelledby="server-resources">
+        <h2 id="server-resources" class="h5">Ресурсы сервера</h2>
+        {% if resources.status == 'ready' %}
+            <dl class="admin-resource-grid">
+                <div>
+                    <dt>Загрузка CPU</dt>
+                    <dd>{{ _self.percent(resources.cpu) }}</dd>
+                </div>
+                <div>
+                    <dt>Доступная память</dt>
+                    <dd>{{ _self.percent(resources.memory) }}</dd>
+                </div>
+                <div>
+                    <dt>Свободное место</dt>
+                    <dd>{{ _self.percent(resources.disk) }} <small class="text-body-secondary">{{ resources.mountpoint }}</small></dd>
+                </div>
+            </dl>
+            <p class="text-body-secondary mb-0">Последний замер {{ _self.timestamp(resources.sampledAt) }}</p>
+        {% elseif resources.status == 'disabled' %}
+            <p class="text-body-secondary mb-0">Сбор метрик сервера не подключён.</p>
+        {% else %}
+            <p class="text-body-secondary mb-0">Свежие метрики сервера пока недоступны.</p>
+        {% endif %}
+    </section>
+
+    <section class="admin-card mb-3" aria-label="Поиск по журналам">
+        {% include 'shared/_list_search_form.html.twig' with {search: search, action: path('admin_operations'), label: 'Поиск по журналам PHP и Go'} only %}
+    </section>
+
+    {% for title, lines in journals %}
+        <section class="admin-card mb-3" aria-labelledby="journal-{{ loop.index }}">
+            <h2 id="journal-{{ loop.index }}" class="h5">{{ title }}</h2>
+            {% if lines is empty %}
+                <p class="text-body-secondary mb-0">{{ search.query is not empty ? 'Совпадений не найдено.' : 'В журнале пока нет доступных записей.' }}</p>
+            {% else %}
+                <pre class="admin-monitor-log" tabindex="0" aria-labelledby="journal-{{ loop.index }}">{{ lines|join("\n") }}</pre>
+            {% endif %}
+        </section>
+    {% endfor %}
+{% endblock %}
+
+{% macro status(healthy, success, failure) %}
+    {% if healthy is null %}
+        <span class="badge text-bg-secondary">Проверка пропущена</span>
+    {% elseif healthy %}
+        <span class="badge text-bg-success">{{ success }}</span>
+    {% else %}
+        <span class="badge text-bg-danger">{{ failure }}</span>
+    {% endif %}
+{% endmacro %}
+
+{% macro timestamp(value) %}
+    <time datetime="{{ value|date('c', 'Europe/Minsk') }}">{{ value|date('d.m.Y H:i:s', 'Europe/Minsk') }} (Минск)</time>
+{% endmacro %}
+
+{% macro percent(value) %}
+    {{ value is null ? 'Нет данных' : (value|number_format(1, ',', ' ') ~ ' %') }}
+{% endmacro %}

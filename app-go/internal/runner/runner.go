@@ -11,6 +11,7 @@ import (
 	"afisha/internal/store"
 )
 
+// Store — то, что раннеру нужно от базы. Интерфейс позволяет тестировать раннер без Postgres.
 type Store interface {
 	Cities(ctx context.Context) (map[string]int, error)
 	Categories(ctx context.Context) (map[string]int, error)
@@ -20,22 +21,26 @@ type Store interface {
 	RecordRun(ctx context.Context, sourceID int, status, summary string) error
 }
 
+// Итоги запуска источника, которые видны в админке.
 const (
 	StatusOK    = "ok"
 	StatusEmpty = "empty" // источник вернул 0 событий
 	StatusError = "error"
 )
 
+// Factory собирает сборщик по настройкам источника из базы. cityName — город источника.
 type Factory func(src store.SourceRow, cityName string) (collector.Collector, error)
 
 type Runner struct {
 	Store Store
-	// Свой сборщик (ключ — slug) главнее настроек из source.config.
-	Custom   map[string]collector.Collector
+	// Custom — сборщики, написанные под конкретный источник (ключ — slug). Они главнее настроек.
+	Custom map[string]collector.Collector
+	// Factory создаёт универсальный сборщик для источников с настройками в source.config.
 	Factory  Factory
 	Notifier notify.Notifier
 	Log      *slog.Logger
 
+	// Loc — часовой пояс для дат в сообщении (по умолчанию UTC), Now — часы для тестов.
 	Loc *time.Location
 	Now func() time.Time
 }
@@ -47,6 +52,8 @@ func (r *Runner) now() time.Time {
 	return time.Now()
 }
 
+// RunOnce обходит включённые источники из таблицы source и в конце присылает одну сводку.
+// Падение одного источника не мешает остальным.
 func (r *Runner) RunOnce(ctx context.Context) {
 	started := r.now()
 
@@ -102,12 +109,14 @@ func (r *Runner) RunOnce(ctx context.Context) {
 
 	sum.Took = r.now().Sub(started)
 
+	// Если запускать было нечего (всё выключено или без настроек), присылать нечего.
 	if len(sum.Reports) > 0 {
 		r.Notifier.Send(ctx, sum.Format())
 	}
 }
 
-// report == nil: настроек нет совсем (пропускаем тихо); report != nil: настройки некорректны, ошибка попадёт в сводку.
+// collectorFor подбирает сборщик. Если не вышло: report == nil — настроек нет совсем (просто пропускаем),
+// report != nil — настройки есть, но некорректны (попадает в сводку как ошибка).
 func (r *Runner) collectorFor(ctx context.Context, src store.SourceRow, cityName string) (collector.Collector, *SourceReport, bool) {
 	if c, ok := r.Custom[src.Slug]; ok {
 		return c, nil, true
@@ -197,6 +206,7 @@ func (r *Runner) record(ctx context.Context, src store.SourceRow, status, summar
 	}
 }
 
+// place — «Город, Площадка» для списка новых событий.
 func place(e collector.Event) string {
 	var parts []string
 	if len(e.CityHints) > 0 && e.CityHints[0] != "" {

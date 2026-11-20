@@ -11,6 +11,7 @@ final readonly class ListEventsQuery implements QueryInterface
         public ?EventStatus $status = null,
         public ?int $createdBy = null,
         public ?int $categoryId = null,
+        public bool $onlyUnpublished = false,
     ) {
     }
 }

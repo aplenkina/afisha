@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping">
+    <entity name="App\Telegram\Domain\Subscriber" table="tg_subscriber">
+        <id name="id" type="integer">
+            <generator strategy="AUTO" />
+        </id>
+        <field name="chatId" column="chat_id" type="bigint" unique="true" />
+        <field name="active" type="boolean" />
+        <field name="createdAt" column="created_at" type="datetimetz_immutable" />
+        <many-to-one field="city" target-entity="App\Catalog\Domain\City">
+            <join-column name="city_id" referenced-column-name="id" nullable="false" on-delete="CASCADE" />
+        </many-to-one>
+    </entity>
+</doctrine-mapping>

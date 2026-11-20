@@ -143,6 +143,7 @@ final class SourceHandlersTest extends TestCase
         $this->sources->add(Source::create(5, 'Другой', 'other', 'https://o.by'));
         $source = $this->sources->add(Source::create(5, 'Ticketpro', 'ticketpro', 'https://a.by'));
         $events = $this->createStub(EventRepositoryInterface::class);
+        // события есть только у Ticketpro: проверяется именно id удаляемого источника
         $events->method('existsBySource')->willReturnCallback(
             static fn (int $id): bool => $id === $source->getId(),
         );

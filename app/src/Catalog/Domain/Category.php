@@ -9,6 +9,17 @@ use App\Shared\Domain\DomainEntity;
 class Category extends DomainEntity
 {
     private ?int $id = null;
+    private ?self $parent = null;
+
+    public function getParent(): ?self
+    {
+        return $this->parent;
+    }
+
+    public function setParent(?self $parent): void
+    {
+        $this->parent = $parent;
+    }
 
     public function __construct(
         private string $name,

@@ -3,6 +3,13 @@
 {% block content_title 'Пользователи' %}
 {% block main %}
     <div class="admin-card">
+        {% set search = list_search() %}
+        {% set users = search.filter(users, item => [item.email, item.role.label, item.id, item.active ? 'Активен' : 'Отключён']) %}
+        {% include 'shared/_list_search_form.html.twig' with {
+            search: search, action: path('admin_user_index'), filters: {},
+            resetUrl: path('admin_user_index', {}), label: 'Поиск по пользователям', placeholder: 'Почта или роль'
+        } only %}
+
         <ul class="admin-list">
             {% for item in users %}
                 <li class="admin-list__item">
@@ -16,6 +23,8 @@
                         {% endif %}
                     </div>
                 </li>
+            {% else %}
+                <li class="admin-empty">{{ search.query is not empty ? 'Совпадений не найдено.' : 'Пользователей пока нет.' }}</li>
             {% endfor %}
         </ul>
 

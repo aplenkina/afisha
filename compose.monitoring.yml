@@ -1,0 +1,69 @@
+services:
+  app:
+    environment:
+      AFISHA_PROMETHEUS_URL: http://prometheus:9090
+      AFISHA_RESOURCE_DISK_MOUNT: ${AFISHA_RESOURCE_DISK_MOUNT:-/}
+    networks:
+      - default
+      - monitoring
+
+  node-exporter:
+    image: prom/node-exporter:v1.12.1
+    pid: host
+    command:
+      - --path.rootfs=/host
+      - --collector.disable-defaults
+      - --collector.cpu
+      - --collector.meminfo
+      - --collector.filesystem
+      - --collector.vmstat
+    volumes:
+      - type: bind
+        source: /
+        target: /host
+        read_only: true
+        bind:
+          propagation: rslave
+    networks:
+      - monitoring
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.13.3
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=14d
+      - --storage.tsdb.retention.size=256MB
+    volumes:
+      - ./docker/monitor/resources/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/monitor/resources/rules.yml:/etc/prometheus/rules.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - 127.0.0.1:${AFISHA_PROMETHEUS_PORT:-19090}:9090
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.35.0
+    entrypoint: [sh, /etc/alertmanager/start.sh]
+    environment:
+      AFISHA_RESOURCE_BOT_TOKEN: ${AFISHA_RESOURCE_BOT_TOKEN:-}
+      AFISHA_RESOURCE_CHAT_ID: ${AFISHA_RESOURCE_CHAT_ID:-}
+    volumes:
+      - ./docker/monitor/resources/alertmanager.sh:/etc/alertmanager/start.sh:ro
+      - alertmanager_data:/alertmanager
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+networks:
+  monitoring:
+
+volumes:
+  prometheus_data:
+  alertmanager_data:

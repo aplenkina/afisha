@@ -1,0 +1,64 @@
+rule_files: [rules.yml]
+evaluation_interval: 30s
+
+tests:
+  - interval: 30s
+    input_series:
+      - series: 'up{job="server",instance="node-exporter:9100"}'
+        values: '1+0x40'
+      - series: 'node_cpu_seconds_total{job="server",instance="node-exporter:9100",cpu="0",mode="idle"}'
+        values: '0+0x40'
+      - series: 'node_memory_MemTotal_bytes{job="server",instance="node-exporter:9100"}'
+        values: '100+0x40'
+      - series: 'node_memory_MemAvailable_bytes{job="server",instance="node-exporter:9100"}'
+        values: '9+0x40'
+      - series: 'node_filesystem_size_bytes{job="server",instance="node-exporter:9100",device="/dev/sda1",mountpoint="/",fstype="ext4"}'
+        values: '100+0x40'
+      - series: 'node_filesystem_avail_bytes{job="server",instance="node-exporter:9100",device="/dev/sda1",mountpoint="/",fstype="ext4"}'
+        values: '14+0x40'
+      - series: 'node_filesystem_readonly{job="server",instance="node-exporter:9100",device="/dev/sda1",mountpoint="/",fstype="ext4"}'
+        values: '0+0x40'
+      - series: 'node_vmstat_oom_kill{job="server",instance="node-exporter:9100"}'
+        values: '0 0 1+0x38'
+    alert_rule_test:
+      - eval_time: 9m30s
+        alertname: AfishaDiskSpaceLow
+        exp_alerts: []
+      - eval_time: 10m
+        alertname: AfishaDiskSpaceLow
+        exp_alerts:
+          - exp_labels: {job: server, instance: 'node-exporter:9100', mountpoint: '/', device: '/dev/sda1', fstype: ext4}
+            exp_annotations:
+              summary: 'Афиша РБ · На разделе / осталось меньше 15% места'
+      - eval_time: 10m
+        alertname: AfishaMemoryLow
+        exp_alerts:
+          - exp_labels: {job: server, instance: 'node-exporter:9100'}
+            exp_annotations:
+              summary: 'Афиша РБ · Доступно меньше 10% оперативной памяти'
+      - eval_time: 15m
+        alertname: AfishaCpuBusy
+        exp_alerts: []
+      - eval_time: 16m
+        alertname: AfishaCpuBusy
+        exp_alerts:
+          - exp_labels: {job: server, instance: 'node-exporter:9100'}
+            exp_annotations:
+              summary: 'Афиша РБ · Загрузка CPU выше 85%'
+      - eval_time: 2m
+        alertname: AfishaOutOfMemory
+        exp_alerts:
+          - exp_labels: {job: server, instance: 'node-exporter:9100'}
+            exp_annotations:
+              summary: 'Афиша РБ · Система завершила процесс из-за нехватки памяти'
+  - interval: 30s
+    input_series:
+      - series: 'up{job="server",instance="node-exporter:9100"}'
+        values: '0+0x6'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: AfishaServerMetricsMissing
+        exp_alerts:
+          - exp_labels: {job: server, instance: 'node-exporter:9100'}
+            exp_annotations:
+              summary: 'Афиша РБ · Метрики сервера перестали поступать'

@@ -3,8 +3,15 @@
 {% block content_title 'Города' %}
 {% block main %}
     <div class="admin-card">
+        {% set search = list_search() %}
+        {% set cities = search.filter(cities, city => [city.name, city.slug, city.id]) %}
+        {% include 'shared/_list_search_form.html.twig' with {
+            search: search, action: path('admin_city_index'), filters: {},
+            resetUrl: path('admin_city_index', {}), label: 'Поиск по городам', placeholder: 'Название или адрес города'
+        } only %}
+
         {% if cities is empty %}
-            <p class="admin-empty">Городов пока нет.</p>
+            <p class="admin-empty">{{ search.query is not empty ? 'Совпадений не найдено.' : 'Городов пока нет.' }}</p>
         {% else %}
             <ul class="admin-list">
                 {% for city in cities %}

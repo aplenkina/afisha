@@ -86,6 +86,8 @@ class Source extends DomainEntity
     }
 
     /**
+     * Настройки универсального сборщика (страницы и соответствие разделов категориям).
+     *
      * @return array<string, mixed>|null
      */
     public function getConfig(): ?array

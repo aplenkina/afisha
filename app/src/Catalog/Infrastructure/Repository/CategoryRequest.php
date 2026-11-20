@@ -18,6 +18,8 @@ final class CategoryRequest implements CategoryRequestInterface
             new SymfonyAssert\Type('string'),
         ])]
         public string $alias = '',
+        #[SymfonyAssert\Regex('/^[0-9]*$/D')]
+        public ?string $parentId = null,
     ) {
     }
 }

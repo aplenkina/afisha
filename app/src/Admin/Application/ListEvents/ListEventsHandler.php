@@ -16,6 +16,6 @@ final readonly class ListEventsHandler implements HandlerInterface
 
     public function __invoke(ListEventsQuery $query): ListEventsResponse
     {
-        return new ListEventsResponse($this->eventRepository->findList($query->status, createdBy: $query->createdBy, categoryId: $query->categoryId));
+        return new ListEventsResponse($this->eventRepository->findList($query->status, createdBy: $query->createdBy, categoryId: $query->categoryId, onlyUnpublished: $query->onlyUnpublished));
     }
 }

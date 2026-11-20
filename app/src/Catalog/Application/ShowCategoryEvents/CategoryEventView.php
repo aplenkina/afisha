@@ -2,6 +2,9 @@
 
 namespace App\Catalog\Application\ShowCategoryEvents;
 
+/**
+ * Событие в списке на странице категории: ближайший сеанс, площадка и город уже подставлены.
+ */
 final readonly class CategoryEventView
 {
     public function __construct(
@@ -18,17 +21,24 @@ final readonly class CategoryEventView
         public bool $isFree,
         public ?string $ticketUrl,
         public ?string $sourceUrl,
+        public ?string $imageUrl = null,
+        public ?string $categoryName = null,
     ) {
     }
 
     public function priceLabel(): ?string
     {
-        if ($this->isFree) {
+        return self::formatPriceRange($this->isFree, $this->priceMin, $this->priceMax);
+    }
+
+    public static function formatPriceRange(bool $isFree, ?string $priceMin, ?string $priceMax): ?string
+    {
+        if ($isFree) {
             return 'Бесплатно';
         }
 
-        $min = $this->formatPrice($this->priceMin);
-        $max = $this->formatPrice($this->priceMax);
+        $min = self::formatPrice($priceMin);
+        $max = self::formatPrice($priceMax);
 
         return match (true) {
             null !== $min && null !== $max && $min !== $max => sprintf('%s – %s BYN', $min, $max),
@@ -38,7 +48,7 @@ final readonly class CategoryEventView
         };
     }
 
-    private function formatPrice(?string $price): ?string
+    private static function formatPrice(?string $price): ?string
     {
         if (null === $price || '' === $price) {
             return null;

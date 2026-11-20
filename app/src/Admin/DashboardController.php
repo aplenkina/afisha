@@ -25,7 +25,9 @@ class DashboardController extends AbstractDashboardController
     {
         return Assets::new()
             ->addAssetMapperEntry('app')
-            ->addCssFile('styles/admin.css');
+            ->addJsFile('admin-theme.js')
+            ->addCssFile('styles/admin.css')
+            ->addCssFile('styles/list-search.css');
     }
 
     public function index(): Response
@@ -42,6 +44,8 @@ class DashboardController extends AbstractDashboardController
     {
         return Dashboard::new()
             ->setTitle('Афиша РБ')
+            ->setFaviconPath('favicon-admin.svg')
+            ->setDefaultColorScheme('light')
             ->renderContentMaximized();
     }
 
@@ -61,6 +65,12 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::linkTo(SourceController::class, 'Источники', 'fas fa-list')->setAction('index')->setPermission('ROLE_ADMIN');
 
         yield MenuItem::section('Системные настройки')->setPermission('ROLE_ADMIN');
+        yield MenuItem::linkToRoute('Мониторинг и журналы', 'fas fa-heart-pulse', 'admin_operations')
+            ->setPermission('ROLE_ADMIN');
+        yield MenuItem::linkToRoute('HTTP-запросы', 'fas fa-globe', 'admin_http_requests')
+            ->setPermission('ROLE_ADMIN');
+        yield MenuItem::linkToRoute('SQL-запросы', 'fas fa-database', 'admin_sql_queries')
+            ->setPermission('ROLE_ADMIN');
         yield MenuItem::linkTo(UserController::class, 'Пользователи', 'fas fa-users')
             ->setAction('index')
             ->setPermission('ROLE_ADMIN');

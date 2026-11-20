@@ -1,0 +1,52 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title 'HTTP-запросы' %}
+
+{% block page_actions %}
+    <twig:ea:Button htmlElement="a" href="{{ path('admin_http_requests', search.parameters()) }}" class="admin-btn">Обновить</twig:ea:Button>
+{% endblock %}
+
+{% block main %}
+    <section class="admin-card" aria-label="Журнал HTTP-запросов">
+        {% include 'shared/_list_search_form.html.twig' with {
+            search: search, action: path('admin_http_requests'), label: 'Поиск по запросам', placeholder: 'Адрес, код, IP или User-Agent'
+        } only %}
+        <p class="text-body-secondary small mb-3">В режиме регулярного выражения <code>^/category/</code> найдёт пути категорий, а <code>^404$</code> — ответы с кодом 404.</p>
+
+        {% if requests is empty %}
+            {% if not search.error %}
+                <p class="text-body-secondary mb-0">{{ search.query is not empty ? 'Совпадений не найдено.' : 'В журнале пока нет запросов. Откройте публичную страницу сайта и обновите журнал.' }}</p>
+            {% endif %}
+        {% else %}
+            <div class="table-responsive" tabindex="0" role="region" aria-label="Таблица HTTP-запросов">
+                <table class="table align-middle mb-0 admin-request-table" role="table">
+                    <caption class="caption-top pt-0">Последние запросы · время по Минску</caption>
+                    <thead role="rowgroup">
+                        <tr role="row">
+                            <th scope="col">Время</th>
+                            <th scope="col">Адрес</th>
+                            <th scope="col">Код</th>
+                            <th scope="col">IP</th>
+                            <th scope="col">User-Agent</th>
+                        </tr>
+                    </thead>
+                    <tbody role="rowgroup">
+                        {% for request in requests %}
+                            {% set statusClass = request.status >= 500 ? 'danger' : (request.status >= 400 ? 'warning' : (request.status < 300 and request.status >= 200 ? 'success' : 'secondary')) %}
+                            <tr role="row">
+                                <td class="text-nowrap" role="cell"><time datetime="{{ request.at|date('c', 'Europe/Minsk') }}">{{ request.at|date('d.m.Y H:i:s', 'Europe/Minsk') }}</time></td>
+                                <td role="cell">
+                                    <code>{{ request.method }} {{ request.path }}</code>
+                                    <small class="d-block text-body-secondary">{{ request.host }}</small>
+                                </td>
+                                <td role="cell"><span class="badge text-bg-{{ statusClass }}">{{ request.status }}</span></td>
+                                <td role="cell"><span class="admin-request-mobile-label" aria-hidden="true">IP</span> <code>{{ request.ip ?? '—' }}</code></td>
+                                <td role="cell"><span class="admin-request-mobile-label" aria-hidden="true">User-Agent</span> {{ request.userAgent ?: '—' }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}

@@ -7,7 +7,7 @@ RUN apt-get update \
 
 WORKDIR /var/www/html/app
 
-COPY docker/frankenphp/Caddyfile /etc/caddy/Caddyfile
+COPY docker/frankenphp/Caddyfile docker/frankenphp/request-logs.caddyfile /etc/caddy/
 COPY docker/frankenphp/entrypoint.sh /usr/local/bin/app-entrypoint
 RUN chmod +x /usr/local/bin/app-entrypoint
 

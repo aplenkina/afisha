@@ -6,6 +6,7 @@ docker/secrets/*
 ###> env в корне ###
 # Symfony читает только app/.env*, compose в корневых env не нуждается.
 /.env*
+!/.env.production.example
 ###< env в корне ###
 
 ###> macOS ###

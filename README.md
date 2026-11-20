@@ -4,7 +4,7 @@
 
 - `app/` — сайт и админка на Symfony (PHP, Twig, EasyAdmin), PostgreSQL.
 - `app-go/` — сборщики событий на Go: раз в сутки забирают события с сайтов-источников и кладут их в базу черновиками.
-- `docker/`, `docker-compose.yml` — окружение разработки.
+- `docker/`, `docker-compose.yml` — окружение разработки. Порядок выпуска на сервер описан в [DEPLOY.md](DEPLOY.md).
 
 ## Запуск после клонирования
 
@@ -18,8 +18,8 @@
 |---|---|
 | `POSTGRES_USER.txt` | пользователь базы |
 | `POSTGRES_PASSWORD.txt` | пароль базы |
-| `TELEGRAM_BOT_TOKEN.txt` | токен бота от `@BotFather` |
-| `TELEGRAM_CHAT_ID.txt` | id чата, куда бот присылает сводки |
+| `TELEGRAM_BOT_TOKEN` | токен бота от `@BotFather` |
+| `TELEGRAM_CHAT_ID` | id чата, куда бот присылает сводки |
 | `APP_SECRET.txt` | секретный ключ приложения, например `openssl rand -hex 16` |
 
 ### 2. Настройки Symfony
@@ -42,9 +42,9 @@ docker compose up -d --build
 
 | Сервис | Адрес |
 |---|---|
-| сайт и админка (`app`) | http://127.0.0.1:1910, админка `/admin` |
-| PostgreSQL | `127.0.0.1:1911` |
-| сборщик (`app-go`), `/health` | http://127.0.0.1:1912 |
+| сайт и админка (`app`) | http://127.0.0.1:1810, админка `/admin` |
+| PostgreSQL | `127.0.0.1:1811` |
+| сборщик (`app-go`), `/health` | http://127.0.0.1:1812 |
 
 ### 4. PHP-зависимости (`app/vendor`)
 
