@@ -10,6 +10,7 @@ body {
     --site-muted: rgba(245, 246, 250, 0.68);
     --site-accent: #ffcc33;
     --site-accent-text: #1b1b1b;
+    --site-link-hover: #b8f638;
     --site-radius: 16px;
     --site-gap: clamp(12px, 2.5vw, 24px);
 
@@ -54,8 +55,7 @@ body {
 }
 
 .site a:is(:hover, :focus-visible) {
-    background-color: var(--site-accent);
-    color: var(--site-accent-text);
+    color: var(--site-link-hover);
 }
 
 .site-panel {
@@ -105,6 +105,10 @@ body {
 
 .site-nav__link.is-active:where(:not(:hover, :focus-visible)) {
     color: var(--site-text);
+}
+
+.site-nav__link:hover,
+.site-nav__link.is-active {
     background: rgba(255, 255, 255, 0.12);
 }
 

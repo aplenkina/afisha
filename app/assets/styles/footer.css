@@ -62,8 +62,7 @@
 }
 
 .site-footer__nav button:is(:hover, :focus-visible) {
-    background-color: var(--calendar-accent, var(--site-accent));
-    color: var(--calendar-on-accent, var(--site-accent-text));
+    color: var(--calendar-link-hover, var(--site-link-hover));
 }
 
 .site-footer__nav [hidden] { display: none; }
