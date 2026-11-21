@@ -36,7 +36,7 @@
                     {% elseif session.startsAt < date() %}
                         <span>Сеанс уже начался</span>
                     {% elseif item.ticketUrl %}
-                        <a class="event-ticket" href="{{ item.ticketUrl }}">Билеты</a>
+                        <a class="event-ticket" href="{{ item.ticketUrl }}" data-ticket-event-id="{{ event.id }}" data-ticket-placement="detail">Билеты</a>
                     {% endif %}
                 </article>
             {% else %}

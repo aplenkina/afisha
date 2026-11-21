@@ -9,7 +9,7 @@
         {% if event.address %}<p>{{ event.address }}</p>{% endif %}
         <strong>{{ event.priceLabel() ?? 'Цена не указана' }}</strong>
         {% if event.ticketUrl %}
-            <a href="{{ event.ticketUrl }}">Билеты</a>
+            <a href="{{ event.ticketUrl }}" data-ticket-event-id="{{ event.id }}" data-ticket-placement="listing">Билеты</a>
         {% endif %}
         {% if event.sourceUrl and event.sourceUrl != event.ticketUrl %}
             <a href="{{ event.sourceUrl }}">Подробнее у организатора</a>

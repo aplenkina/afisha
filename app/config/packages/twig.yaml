@@ -1,5 +1,10 @@
+parameters:
+    env(GTM_CONTAINER_ID): ''
+
 twig:
     file_name_pattern: '*.twig'
+    globals:
+        gtm_container_id: '%env(GTM_CONTAINER_ID)%'
 
 when@test:
     twig:

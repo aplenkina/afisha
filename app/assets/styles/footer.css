@@ -25,7 +25,7 @@
     gap: 4px 20px;
 }
 
-.site-footer__nav a {
+.site-footer__nav a, .site-footer__nav button {
     display: inline-flex;
     align-items: center;
     min-block-size: 44px;
@@ -33,9 +33,50 @@
     text-underline-offset: .2em;
 }
 
-.site-footer__nav a:focus-visible {
+.site-footer__nav button {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.site-footer__nav [hidden] { display: none; }
+
+.site-footer__nav :is(a, button):focus-visible {
     outline: 2px solid var(--calendar-control-accent, var(--site-accent));
     outline-offset: 2px;
+}
+
+.site-analytics {
+    position: fixed;
+    z-index: 20;
+    inset-inline-end: 16px;
+    inset-block-end: 16px;
+    box-sizing: border-box;
+    width: min(390px, calc(100% - 32px));
+    padding: 16px;
+    border: 1px solid var(--calendar-line, var(--site-border));
+    border-radius: 12px;
+    background: var(--calendar-surface, #20222e);
+    color: var(--calendar-text, var(--site-text));
+    box-shadow: 0 4px 20px rgb(0 0 0 / 18%);
+}
+
+.site-analytics h2 { margin: 0; font-size: 1rem; }
+.site-analytics p { margin: 6px 0 12px; }
+.site-analytics__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.site-analytics button {
+    min-block-size: 44px;
+    padding: 0 12px;
+    border: 1px solid currentColor;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
 }
 
 .site-footer__bottom {

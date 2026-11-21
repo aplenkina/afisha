@@ -28,6 +28,12 @@ prod up -d
 
 Проверь HTTPS, главную, страницу категории, вход в админку и путь от фильтра до карточки и ссылки на билет. Проверь `prod ps` и `prod logs --tail=100 app app-go`. Сборщик запускается ежедневно в 04:00 по Минску, если не указан `COLLECT_AT`. Telegram webhook можно подключить отдельным релизом; без `TELEGRAM_WEBHOOK_SECRET` он возвращает 403.
 
+## Аналитика
+
+Публичные страницы загружают контейнер `GTM-WDZ888B5` после согласия на аналитические cookies. Для другого контейнера задай `GTM_CONTAINER_ID` в `.env.production`. Пустое значение отключает подключение.
+
+В Google Tag Manager настрой Google tag для веб-потока GA4 с обычным просмотром страницы. Для кликов по билетам настрой тег события GA4 `ticket_click` с одноимённым триггером «Пользовательское событие». Тег передаёт параметры `event_id` и `ticket_placement` из переменных уровня данных. После публикации проверь отправку событий в Tag Assistant и DebugView.
+
 ## Мониторинг
 
 Для Cloudflare Workers загрузи `docker/monitor/worker.mjs`, привяжи KV namespace как `MONITOR_STATE`, задай переменную `SITE_URL=https://afisha-rb.by` и секреты `BOT_TOKEN`, `CHAT_ID`. Добавь Cron Trigger `*/5 * * * *`. DNS переносить не нужно. У Worker нет публичного HTTP-обработчика.
