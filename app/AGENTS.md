@@ -6,6 +6,9 @@
   in Russian describing what needs to be done. This applies to investigations,
   checks, edits, deployments, and other actions. Wait for the user's explicit
   approval of the plan before starting the requested work.
+- Publish all repository changes through GitHub pull requests targeting `main`.
+  Create a separate branch for each change, push that branch, and open a pull
+  request for review. Do not push changes directly to `main`.
 
 This is a Symfony project. Check `composer.json` for the exact Symfony/PHP version
 in use, and read `symfony.lock` to see which recipes ran. Don't assume Doctrine,
