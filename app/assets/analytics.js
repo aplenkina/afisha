@@ -4,7 +4,7 @@ const accept = panel.querySelector('[data-analytics-accept]');
 const decline = panel.querySelector('[data-analytics-decline]');
 const storageKey = 'afisha-analytics-consent';
 let choice;
-let containerLoaded = false;
+let containersLoaded = false;
 
 try {
     choice = localStorage.getItem(storageKey);
@@ -12,8 +12,8 @@ try {
     // Visitors can still choose for the current page when storage is unavailable.
 }
 
-function loadContainer() {
-    if (containerLoaded) {
+function loadContainers() {
+    if (containersLoaded) {
         return;
     }
 
@@ -31,11 +31,13 @@ function loadContainer() {
     gtag('consent', 'update', {analytics_storage: 'granted'});
     window.dataLayer.push({'gtm.start': Date.now(), event: 'gtm.js'});
 
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = 'https://www.googletagmanager.com/gtm.js?id=' + encodeURIComponent(panel.dataset.analyticsContainer);
-    document.head.append(script);
-    containerLoaded = true;
+    for (const id of new Set(panel.dataset.analyticsContainer.split(','))) {
+        const script = document.createElement('script');
+        script.async = true;
+        script.src = 'https://www.googletagmanager.com/gtm.js?id=' + encodeURIComponent(id);
+        document.head.append(script);
+    }
+    containersLoaded = true;
 }
 
 function saveChoice(value) {
@@ -47,8 +49,8 @@ function saveChoice(value) {
     settings.focus();
 
     if (choice === 'granted') {
-        loadContainer();
-    } else if (containerLoaded) {
+        loadContainers();
+    } else if (containersLoaded) {
         window.location.reload();
     }
 }
@@ -62,13 +64,13 @@ accept.addEventListener('click', () => saveChoice('granted'));
 decline.addEventListener('click', () => saveChoice('denied'));
 
 if (choice === 'granted') {
-    loadContainer();
+    loadContainers();
 } else if (choice !== 'denied') {
     panel.hidden = false;
 }
 
 function trackTicketClick(event) {
-    if (choice !== 'granted' || !containerLoaded) {
+    if (choice !== 'granted' || !containersLoaded) {
         return;
     }
     const link = event.target.closest('a[data-ticket-event-id]');

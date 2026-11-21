@@ -1,3 +1,4 @@
+{% set gtm_container_ids = [gtm_container_id, gtm_extra_container_id]|filter(id => id is not empty) %}
 <footer class="site-footer">
     <div class="site-footer__about">
         <strong>Афиша РБ</strong>
@@ -7,7 +8,7 @@
     <nav class="site-footer__nav" aria-label="Навигация в подвале">
         <a href="{{ path('home') }}">Календарь</a>
         <a href="{{ path('category_index') }}">Категории</a>
-        {% if gtm_container_id %}
+        {% if gtm_container_ids %}
             <button type="button" data-analytics-settings hidden>Настройки cookies</button>
         {% endif %}
     </nav>
@@ -18,8 +19,8 @@
     </div>
 </footer>
 
-{% if gtm_container_id %}
-    <section class="site-analytics" data-analytics-container="{{ gtm_container_id }}" aria-labelledby="analytics-title" hidden>
+{% if gtm_container_ids %}
+    <section class="site-analytics" data-analytics-container="{{ gtm_container_ids|join(',') }}" aria-labelledby="analytics-title" hidden>
         <h2 id="analytics-title">Аналитические cookies</h2>
         <p>Google Analytics помогает нам понять, какие страницы и события интересуют посетителей.</p>
         <div class="site-analytics__actions">
