@@ -36,7 +36,7 @@
 
 .site-footer__contact a {
     color: var(--calendar-text, var(--site-text));
-    text-underline-offset: .2em;
+    font-weight: 600;
     overflow-wrap: anywhere;
 }
 
@@ -51,7 +51,6 @@
     align-items: center;
     min-block-size: 44px;
     color: var(--calendar-text, var(--site-text));
-    text-underline-offset: .2em;
 }
 
 .site-footer__nav button {
@@ -59,8 +58,11 @@
     border: 0;
     background: none;
     font: inherit;
-    text-decoration: underline;
     cursor: pointer;
+}
+
+.site-footer__nav button:is(:hover, :focus-visible) {
+    color: var(--calendar-link-hover, var(--site-link-hover));
 }
 
 .site-footer__nav [hidden] { display: none; }
