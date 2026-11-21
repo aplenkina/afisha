@@ -25,7 +25,8 @@
 
 body:has(.calendar) { margin: 0; background: var(--calendar-background); color: var(--calendar-text); font: 16px/1.4 system-ui, sans-serif; }
 :root[data-calendar-theme="graphite"] body:has(.calendar) { color-scheme: dark; }
-.calendar { box-sizing: border-box; width: min(100%, 740px); margin: auto; padding: 16px 20px 48px; }
+.calendar { box-sizing: border-box; width: min(100%, 740px); margin: auto; padding: 16px 20px 0; }
+.calendar > .site-footer { padding-block-end: 48px; }
 .calendar { position: relative; isolation: isolate; }
 .calendar-backdrop { position: absolute; z-index: -1; inset-block-start: 48px; inset-inline-end: 0; width: min(88%, 820px); height: auto; color: color-mix(in srgb, var(--calendar-accent) 37%, transparent); pointer-events: none; }
 @media (max-width: 619px) {
@@ -39,6 +40,7 @@ body:has(.calendar) { margin: 0; background: var(--calendar-background); color: 
 .calendar-logo { font-size: 24px; font-weight: 850; letter-spacing: -.06em; text-decoration: none; }
 .calendar-logo span { margin-inline-start: 4px; padding-inline: 5px; border-radius: 4px; background: var(--calendar-accent); color: var(--calendar-on-accent); }
 .calendar h1 { margin: 24px 0 16px; font-size: clamp(2.4rem, 8vw, 4rem); line-height: 1; letter-spacing: -.075em; }
+.calendar-filter-bar { display: none; }
 .calendar-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 12px; padding: 14px; border: 1px solid var(--calendar-line); border-radius: 12px; background: var(--calendar-event-bg); }
 .calendar-select { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(1.4em, auto) 44px; gap: 6px; min-width: 0; }
 .calendar-search { display: grid; gap: 6px; min-width: 0; }
@@ -172,6 +174,70 @@ body:has(.calendar) { margin: 0; background: var(--calendar-background); color: 
 .calendar-category-card__title { font-size: 1.15rem; font-weight: 750; }
 .calendar-category-card__meta { color: var(--calendar-muted); }
 @media (min-width: 620px) { .calendar-category-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+@media (width < 850px) {
+    .calendar-filter-bar:not([hidden]) {
+        display: flex;
+        align-items: start;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-block-end: 12px;
+    }
+
+    .calendar-filter-bar:not([hidden]):has([aria-expanded="false"]) + .calendar-filters {
+        display: none;
+    }
+
+    .calendar-filter-toggle, .calendar-applied-filters a, .calendar-applied-filters li > span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-block-size: 44px;
+        padding: 0 10px;
+        border: 1px solid var(--calendar-line);
+        border-radius: 8px;
+        color: inherit;
+        background: var(--calendar-surface);
+        font: inherit;
+    }
+
+    .calendar-filter-toggle {
+        border-color: var(--calendar-accent);
+        background: var(--calendar-accent);
+        color: var(--calendar-on-accent);
+        font-weight: 700;
+    }
+
+    .calendar-applied-filters {
+        display: flex;
+        flex: 1 1 0;
+        gap: 6px;
+        min-inline-size: 0;
+        margin: 0;
+        padding: 0 2px 2px;
+        overflow-x: auto;
+        list-style: none;
+        font-size: .875rem;
+    }
+
+    .calendar-applied-filters li { flex: 0 0 auto; max-inline-size: 100%; }
+    .calendar-applied-filters a { box-sizing: border-box; max-inline-size: 100%; text-decoration: none; }
+    .calendar-applied-filters a > :first-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .calendar-filter-status {
+        display: none;
+        flex-basis: 100%;
+        margin: 0;
+        color: var(--calendar-muted);
+    }
+
+    #calendar-content[aria-busy="true"] .calendar-filter-status { display: block; }
+    .calendar-results, .calendar-filters [role="alert"] { scroll-margin-block-start: 12px; }
+}
 
 @media (min-width: 850px) {
     .calendar { width: min(100%, 1280px); padding-inline: clamp(24px, 4vw, 56px); }

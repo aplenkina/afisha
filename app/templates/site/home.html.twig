@@ -5,9 +5,38 @@
 {% block calendar_content %}
     {% set weekdays = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'] %}
     {% set months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'] %}
+    {% set periods = {today: 'Сегодня', tomorrow: 'Завтра', weekend: 'Выходные', week: 'Неделя', all: 'Все даты', custom: 'Выбрать даты'} %}
+    {% set filterParams = calendarParams|merge(period == 'weekend' ? {} : {period: period}) %}
+    {% set filterParams = filterParams|merge(period == 'custom' ? {from: dateFrom, to: dateTo} : {}) %}
+    {% set filterParams = filterParams|merge(onlyFree ? {free: 1} : {}) %}
+    {% set periodSummary = period == 'custom' and not dateError ? dateFrom ~ ' – ' ~ dateTo : periods[period] %}
+    {% set appliedFilters = [
+        {label: selectedCity ? selectedCity.name : '', keys: ['city']},
+        {label: selectedCategory ? selectedCategory.name : '', keys: ['category']},
+        {label: periodSummary, keys: period == 'weekend' ? [] : ['period', 'from', 'to']},
+        {label: onlyFree ? 'Бесплатно' : '', keys: ['free']},
+        {label: search, keys: ['q']}
+    ] %}
         <main id="calendar-content">
             <h1>{{ selectedCategory ? selectedCategory.name : 'Афиша города' }}{{ selectedCity ? ' · ' ~ selectedCity.name }}</h1>
-            <form class="calendar-filters" method="get" action="{{ path('home') }}">
+            <div class="calendar-filter-bar" hidden>
+                <button type="button" class="calendar-filter-toggle" aria-controls="calendar-filters" aria-expanded="{{ dateError ? 'true' : 'false' }}">Фильтры</button>
+                <ul class="calendar-applied-filters" aria-label="Выбранные условия">
+                    {% for filter in appliedFilters|filter(filter => filter.label is not empty) %}
+                        <li>
+                            {% if filter.keys is empty %}
+                                <span>{{ filter.label }}</span>
+                            {% else %}
+                                <a href="{{ path('home', filterParams|filter((value, key) => key not in filter.keys)) }}" aria-label="Убрать фильтр «{{ filter.label }}»">
+                                    <span>{{ filter.label }}</span><span aria-hidden="true">×</span>
+                                </a>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+                <p class="calendar-filter-status" role="status">Обновляем события…</p>
+            </div>
+            <form class="calendar-filters" id="calendar-filters" method="get" action="{{ path('home') }}">
                 <label class="calendar-search">Поиск по названию
                     <input type="search" name="q" value="{{ search }}" maxlength="120" placeholder="Например, джаз">
                 </label>
@@ -24,7 +53,7 @@
                 <label class="calendar-free"><input type="checkbox" name="free" value="1" {{ onlyFree ? 'checked' }}> Только бесплатно</label>
                 <fieldset>
                     <legend>Когда</legend>
-                    {% for key, label in {today: 'Сегодня', tomorrow: 'Завтра', weekend: 'Выходные', week: 'Неделя', all: 'Все даты', custom: 'Выбрать даты'} %}
+                    {% for key, label in periods %}
                         <label class="calendar-period">
                             <input type="radio" name="period" value="{{ key }}" {{ period == key ? 'checked' }}>
                             <span>{{ label }}</span>
@@ -41,12 +70,12 @@
                                 </div>
                             </div>
                         {% endfor %}
-                        {% if dateError %}<p role="alert">{{ dateError }}</p>{% endif %}
+                        {% if dateError %}<p role="alert" tabindex="-1">{{ dateError }}</p>{% endif %}
                     </div>
                 </fieldset>
                 <button type="submit">Показать события</button>
             </form>
-            <div class="calendar-results" aria-live="polite">
+            <div class="calendar-results" role="region" aria-label="Результаты поиска" aria-live="polite" tabindex="-1">
             {% if not dateError %}
             {% for day, events in days %}
                 <section class="calendar-day" aria-labelledby="day-{{ day }}">
@@ -183,7 +212,12 @@
 
             let main = document.getElementById('calendar-content');
             let pending;
-            initDateFields(main);
+            const desktop = window.matchMedia('(min-width: 850px)');
+            function initCalendar() {
+                initDateFields(main);
+                main.querySelector('.calendar-filter-bar').hidden = false;
+            }
+            initCalendar();
 
             async function update(url, push) {
                 pending?.abort();
@@ -205,8 +239,17 @@
                     document.title = page.title;
                     main.replaceWith(next);
                     main = next;
-                    initDateFields(main);
-                    if (restoreFocus) main.querySelector('button[type="submit"]').focus({preventScroll: true});
+                    initCalendar();
+                    if (push && !desktop.matches) {
+                        const target = main.querySelector('.calendar-filters [role="alert"]') ?? main.querySelector('.calendar-results');
+                        target.focus({preventScroll: true});
+                        const top = target.getBoundingClientRect().top;
+                        if (top < 0 || top > window.innerHeight - 120) {
+                            target.scrollIntoView({block: 'start'});
+                        }
+                    } else if (restoreFocus) {
+                        main.querySelector('button[type="submit"]').focus({preventScroll: true});
+                    }
                 } catch {
                     if (!request.signal.aborted) location.assign(url);
                 } finally {
@@ -216,6 +259,18 @@
                     }
                 }
             }
+
+            document.addEventListener('click', event => {
+                const toggle = event.target.closest('#calendar-content .calendar-filter-toggle');
+                if (toggle) {
+                    toggle.setAttribute('aria-expanded', String(toggle.getAttribute('aria-expanded') !== 'true'));
+                    return;
+                }
+                const link = event.target.closest('#calendar-content .calendar-applied-filters a');
+                if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                event.preventDefault();
+                update(link.href, true);
+            });
 
             document.addEventListener('submit', event => {
                 const form = event.target;

@@ -2,6 +2,11 @@
     <div class="site-footer__about">
         <strong>Афиша РБ</strong>
         <p>Календарь концертов, спектаклей, спортивных и других событий в Беларуси.</p>
+        {% set contact_email = 'afisha.rb.by@gmail.com' %}
+        <div class="site-footer__contact">
+            <p>Предложения по сайту и информация о событиях</p>
+            <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>
+        </div>
     </div>
 
     <nav class="site-footer__nav" aria-label="Навигация в подвале">

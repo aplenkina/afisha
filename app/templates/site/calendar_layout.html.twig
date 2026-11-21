@@ -15,7 +15,7 @@
 {% endblock %}
 
 {% block body %}
-    <div class="calendar">
+    <div class="calendar site-page">
         <svg class="calendar-backdrop" viewBox="0 0 820 480" fill="none" aria-hidden="true" focusable="false">
             <path d="M818 22C676 3 626 43 612 106C599 169 678 197 755 173C816 154 808 94 752 81C679 64 637 111 644 172C650 238 582 283 486 273C380 262 309 309 340 367C367 417 455 376 463 329C472 274 405 254 327 273C231 296 210 393 104 424C68 435 35 438 2 434" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/>
         </svg>
@@ -26,7 +26,9 @@
                 <button class="calendar-theme" type="button" hidden>Ночь</button>
             </div>
         </header>
-        {% block calendar_content %}{% endblock %}
+        <div class="site-page__content">
+            {% block calendar_content %}{% endblock %}
+        </div>
         {% include 'site/_footer.html.twig' only %}
     </div>
     <script>
