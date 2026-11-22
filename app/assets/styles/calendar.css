@@ -134,13 +134,28 @@ body:has(.calendar) { margin: 0; background: var(--calendar-background); color: 
 .event-detail-intro { display: grid; gap: 20px; margin-block: 20px 28px; }
 .event-detail-intro h1 { margin: 8px 0 14px; font-size: clamp(2rem, 5vw, 3.5rem); letter-spacing: -.045em; }
 .event-detail-intro img { width: 100%; max-width: 280px; max-height: 320px; object-fit: contain; object-position: left top; border-radius: 12px; }
+.event-detail-intro > figure:has(> iframe[src^="https://www.instagram.com/"]) {
+    display: grid;
+    grid-template-rows: 320px auto;
+    width: 210px;
+    max-width: 100%;
+    overflow: clip;
+}
+.event-detail-intro > figure > iframe[src^="https://www.instagram.com/"] {
+    min-width: 200%;
+    height: 640px;
+    min-height: 0;
+    border-radius: 24px;
+    transform: scale(.5);
+    transform-origin: top left;
+}
 .event-detail-meta { color: var(--calendar-muted); }
 .event-detail-description { white-space: pre-line; }
 .event-session { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-block: 8px; padding: var(--calendar-panel-padding); border: 1px solid var(--calendar-line); border-radius: 12px; background: var(--calendar-surface); }
 .event-session p { margin: 4px 0 0; }
 .event-session .event-ticket { display: inline-flex; min-height: 44px; align-items: center; padding-inline: 16px; border-radius: 8px; background: var(--calendar-accent); color: var(--calendar-on-accent); font-weight: 700; text-decoration: none; }
 @media (min-width: 700px) {
-    .event-detail-intro:has(img) { grid-template-columns: minmax(0, 1fr) minmax(0, 250px); align-items: start; }
+    .event-detail-intro:has(img, > figure > iframe[src^="https://www.instagram.com/"]) { grid-template-columns: minmax(0, 1fr) minmax(0, 250px); align-items: start; }
 }
 .site .calendar-event { color: var(--calendar-text); }
 .calendar-event { position: relative; align-items: start; }
