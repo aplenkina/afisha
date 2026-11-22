@@ -23,6 +23,7 @@ final readonly class CategoryEventView
         public ?string $sourceUrl,
         public ?string $imageUrl = null,
         public ?string $categoryName = null,
+        public ?string $instagramPostUrl = null,
     ) {
     }
 

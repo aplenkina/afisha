@@ -153,6 +153,22 @@ body:has(.calendar) { margin: 0; background: var(--calendar-background); color: 
 .calendar-event img, .calendar-cover { width: 76px; height: 76px; border-radius: 8px; background: var(--calendar-cover); }
 .calendar-event img { object-fit: cover; }
 .calendar-cover { display: grid; place-items: center; box-sizing: border-box; padding: 4px; text-align: center; font-size: .7rem; font-weight: 800; }
+.calendar-event-poster { position: relative; z-index: 1; grid-column: 1 / -1; }
+.calendar-event-poster > summary { width: fit-content; cursor: pointer; color: var(--calendar-accent); }
+.calendar-event-poster > summary:focus-visible { outline: 2px solid var(--calendar-control-accent); outline-offset: 2px; }
+.calendar-event-poster > figure {
+    display: grid;
+    grid-template-rows: 320px auto;
+    width: min(210px, 100%);
+    overflow: clip;
+}
+.calendar-event-poster > figure > iframe {
+    min-width: 200%;
+    height: 640px;
+    border-radius: 24px;
+    transform: scale(.5);
+    transform-origin: top left;
+}
 .calendar-empty { margin-top: 24px; padding: var(--calendar-panel-padding); border: 1px solid var(--calendar-line); border-radius: 12px; }
 .calendar-empty h2 { margin: 0 0 8px; font-size: 1.25rem; }
 .calendar .calendar-category { display: block; }

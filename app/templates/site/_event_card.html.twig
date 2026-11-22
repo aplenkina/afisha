@@ -20,4 +20,13 @@
     {% else %}
         <span class="calendar-cover">{{ event.categoryName }}</span>
     {% endif %}
+    {% if showInstagramPreview and not event.imageUrl and event.instagramPostUrl %}
+        <details class="calendar-event-poster" data-instagram-preview>
+            <summary>Показать афишу</summary>
+            <template>
+                {% include '_instagram_post.html.twig' with {postUrl: event.instagramPostUrl} only %}
+            </template>
+            <noscript><a href="{{ event.instagramPostUrl }}">Открыть пост в Instagram</a></noscript>
+        </details>
+    {% endif %}
 </article>

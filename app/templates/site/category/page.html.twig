@@ -2,6 +2,11 @@
 
 {% block title %}{{ category.name }} — Афиша РБ{% endblock %}
 
+{% block javascripts %}
+    {{ parent() }}
+    <script type="module" src="{{ asset('instagram-preview.js') }}"></script>
+{% endblock %}
+
 {% block calendar_content %}
 <main class="calendar-category">
     <nav class="site-breadcrumbs" aria-label="Хлебные крошки">
@@ -26,7 +31,7 @@
     {% else %}
         <p class="site-muted calendar-category-events-count">Ближайшие события: {{ events|length }}</p>
         {% include 'site/_event_grid.html.twig' with {
-            events: events, heading: 'h2', showDate: true, showCity: true
+            events: events, heading: 'h2', showDate: true, showCity: true, showInstagramPreview: true
         } only %}
     {% endif %}
 </main>

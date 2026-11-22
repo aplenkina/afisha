@@ -251,6 +251,15 @@ class Event extends DomainEntity
         return $this->sourceUrl;
     }
 
+    public static function instagramPostUrlFrom(mixed $url): ?string
+    {
+        if (!is_string($url) || preg_match('~^https://(?:www\.)?instagram\.com/((?:p|reel)/[A-Za-z0-9_-]+)/?(?:[?#].*)?$~iD', $url, $match) !== 1) {
+            return null;
+        }
+
+        return 'https://www.instagram.com/'.$match[1].'/';
+    }
+
     public function getTicketUrl(): ?string
     {
         return $this->ticketUrl;

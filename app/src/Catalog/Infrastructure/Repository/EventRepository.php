@@ -70,6 +70,10 @@ readonly class EventRepository extends AbstractDoctrineRepository implements Eve
                 SELECT e.id, e.title, e.slug, e.price_min, e.price_max, e.is_free,
                        COALESCE(s.ticket_url, e.ticket_url) AS ticket_url, e.source_url,
                        e.image_url, category.name AS category_name,
+                       -- Older databases may not have import_observation.
+                       CASE WHEN CAST(:category AS integer) IS NOT NULL AND e.image_url IS NULL
+                            THEN to_jsonb(e)->'import_observation'->>'originalUrl'
+                       END AS instagram_post_url,
                        s.starts_at, s.ends_at, v.name AS venue_name, v.address, c.name AS city_name
                 FROM event e
                 JOIN city c ON c.id = e.city_id
@@ -132,6 +136,7 @@ readonly class EventRepository extends AbstractDoctrineRepository implements Eve
             sourceUrl: self::httpUrlOrNull($row['source_url']),
             imageUrl: self::httpUrlOrNull($row['image_url']),
             categoryName: $row['category_name'],
+            instagramPostUrl: Event::instagramPostUrlFrom($row['instagram_post_url']) ?? Event::instagramPostUrlFrom($row['source_url']),
         ), $rows);
     }
 

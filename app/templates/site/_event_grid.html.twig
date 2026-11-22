@@ -3,7 +3,8 @@
         {% for event in events %}
             <li>
                 {% include 'site/_event_card.html.twig' with {
-                    event: event, heading: heading, showDate: showDate, showCity: showCity
+                    event: event, heading: heading, showDate: showDate, showCity: showCity,
+                    showInstagramPreview: showInstagramPreview|default(false)
                 } only %}
             </li>
         {% endfor %}
