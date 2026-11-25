@@ -6,9 +6,7 @@ security:
     # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
     providers:
         app_users:
-            entity:
-                class: App\Identity\Domain\User
-                property: email
+            id: App\Identity\Infrastructure\Security\IdentityUserProvider
 
     role_hierarchy:
         ROLE_MODERATOR: ROLE_EDITOR
@@ -19,6 +17,7 @@ security:
             pattern: ^/(_profiler|_wdt|assets|build)/
             security: false
         main:
+            context: identity
             lazy: true
             provider: app_users
             user_checker: App\Identity\Infrastructure\Security\ActiveUserChecker

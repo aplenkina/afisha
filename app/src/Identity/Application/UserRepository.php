@@ -1,11 +1,13 @@
 <?php
 
-namespace App\Identity;
+declare(strict_types=1);
+
+namespace App\Identity\Application;
 
 use App\Identity\Domain\User;
 use App\Identity\Domain\UserNotFound;
 
-interface UserRepositoryInterface
+interface UserRepository
 {
     public function save(User $user): void;
 
@@ -15,6 +17,8 @@ interface UserRepositoryInterface
      * @throws UserNotFound
      */
     public function findById(int $id): User;
+
+    public function findByEmail(string $email): ?User;
 
     public function existsByEmail(string $email, ?int $exceptId = null): bool;
 

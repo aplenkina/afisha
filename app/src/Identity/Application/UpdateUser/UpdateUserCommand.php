@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Identity\Application\UpdateUser;
 
 use App\Identity\Domain\UserRole;

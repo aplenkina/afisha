@@ -1,14 +1,16 @@
 <?php
 
-namespace App\Admin\Application\GetUser;
+declare(strict_types=1);
 
-use App\Identity\Domain\User;
+namespace App\Identity\Application\GetUser;
+
+use App\Identity\Application\UserView;
 use App\Shared\Bus\Query\ResponseInterface;
 
 final readonly class GetUserResponse implements ResponseInterface
 {
     public function __construct(
-        public User $user,
+        public UserView $user,
     ) {
     }
 }

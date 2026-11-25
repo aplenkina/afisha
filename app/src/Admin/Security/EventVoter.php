@@ -3,7 +3,7 @@
 namespace App\Admin\Security;
 
 use App\Catalog\Domain\Event;
-use App\Identity\Domain\User;
+use App\Identity\Infrastructure\Security\AuthenticatedUser;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Vote;
@@ -32,7 +32,7 @@ final class EventVoter extends Voter
     {
         $user = $token->getUser();
 
-        if (!$user instanceof User) {
+        if (!$user instanceof AuthenticatedUser) {
             return false;
         }
 
@@ -40,6 +40,6 @@ final class EventVoter extends Voter
             return true;
         }
 
-        return $subject->getCreatedBy() === $user->getId();
+        return $subject->getCreatedBy() === $user->id;
     }
 }

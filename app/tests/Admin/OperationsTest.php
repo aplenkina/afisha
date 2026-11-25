@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Admin;
 
-use App\Identity\Domain\User;
 use App\Identity\Domain\UserRole;
+use App\Identity\Infrastructure\Security\AuthenticatedUser;
 use App\Operations\MonitorState;
 use App\Operations\RecentLogs;
 use App\Operations\ServerMetrics;
@@ -28,8 +28,8 @@ final class OperationsTest extends WebTestCase
         $filesystem->remove($file);
         $filesystem->mkdir($file);
         try {
-            $editor = User::create('editor@example.test', 'hash', UserRole::Editor);
-            $admin = User::create('admin@example.test', 'hash', UserRole::Admin);
+            $editor = new AuthenticatedUser(1, 'editor@example.test', UserRole::Editor, 'hash-editor', true);
+            $admin = new AuthenticatedUser(2, 'admin@example.test', UserRole::Admin, 'hash-admin', true);
             $provider = $this->createStub(UserProviderInterface::class);
             $provider->method('supportsClass')->willReturn(true);
             $provider->method('refreshUser')->willReturnArgument(0);
@@ -52,7 +52,7 @@ final class OperationsTest extends WebTestCase
             $client->request('GET', '/admin/operations');
             self::assertResponseRedirects('/admin/login');
 
-            $client->loginUser($editor);
+            $client->loginUser($editor, 'identity');
             $client->request('GET', '/admin/operations');
             self::assertResponseStatusCodeSame(403);
             $client->request('GET', '/admin/sql-queries');
@@ -89,7 +89,7 @@ final class OperationsTest extends WebTestCase
                 'lastSiteFailureAt' => 1,
             ], JSON_THROW_ON_ERROR));
 
-            $client->loginUser($admin);
+            $client->loginUser($admin, 'identity');
             $client->request('GET', '/admin/operations');
             self::assertResponseIsSuccessful();
             self::assertSelectorTextContains('#main', 'Актуален');

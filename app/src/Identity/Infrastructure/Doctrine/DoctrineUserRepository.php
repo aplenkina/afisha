@@ -1,13 +1,19 @@
 <?php
 
-namespace App\Identity;
+declare(strict_types=1);
 
+namespace App\Identity\Infrastructure\Doctrine;
+
+use App\Identity\Application\UserRepository;
 use App\Identity\Domain\User;
+use App\Identity\Domain\UserCredentials;
 use App\Identity\Domain\UserNotFound;
 use App\Identity\Domain\UserRole;
 use App\Shared\Infrastructure\Doctrine\AbstractDoctrineRepository;
+use Symfony\Component\DependencyInjection\Attribute\AsAlias;
 
-readonly class UserRepository extends AbstractDoctrineRepository implements UserRepositoryInterface
+#[AsAlias(UserRepository::class)]
+final readonly class DoctrineUserRepository extends AbstractDoctrineRepository implements UserRepository
 {
     #[\Override]
     public function save(User $user): void
@@ -28,9 +34,15 @@ readonly class UserRepository extends AbstractDoctrineRepository implements User
     }
 
     #[\Override]
+    public function findByEmail(string $email): ?User
+    {
+        return $this->repository(User::class)->findOneBy(['email' => UserCredentials::normalizeEmail($email)]);
+    }
+
+    #[\Override]
     public function existsByEmail(string $email, ?int $exceptId = null): bool
     {
-        $found = $this->repository(User::class)->findOneBy(['email' => mb_strtolower($email)]);
+        $found = $this->findByEmail($email);
 
         return null !== $found && $found->getId() !== $exceptId;
     }

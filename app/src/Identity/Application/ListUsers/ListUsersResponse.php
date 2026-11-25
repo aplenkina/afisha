@@ -1,14 +1,16 @@
 <?php
 
-namespace App\Admin\Application\ListUsers;
+declare(strict_types=1);
 
-use App\Identity\Domain\User;
+namespace App\Identity\Application\ListUsers;
+
+use App\Identity\Application\UserView;
 use App\Shared\Bus\Query\ResponseInterface;
 
 final readonly class ListUsersResponse implements ResponseInterface
 {
     /**
-     * @param list<User> $users
+     * @param list<UserView> $users
      */
     public function __construct(
         public array $users,
