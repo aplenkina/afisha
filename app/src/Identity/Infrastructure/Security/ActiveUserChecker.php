@@ -1,8 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Identity\Infrastructure\Security;
 
-use App\Identity\Domain\User;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Exception\CustomUserMessageAccountStatusException;
 use Symfony\Component\Security\Core\User\UserCheckerInterface;
@@ -13,7 +14,7 @@ final class ActiveUserChecker implements UserCheckerInterface
     #[\Override]
     public function checkPreAuth(UserInterface $user): void
     {
-        if ($user instanceof User && !$user->isActive()) {
+        if ($user instanceof AuthenticatedUser && !$user->active) {
             throw new CustomUserMessageAccountStatusException('Учётная запись отключена');
         }
     }

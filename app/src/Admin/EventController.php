@@ -26,7 +26,7 @@ use App\Catalog\Domain\EventNotFound;
 use App\Catalog\Domain\EventStatus;
 use App\Catalog\Domain\SessionStatus;
 use App\Catalog\Infrastructure\Repository\EventRepositoryInterface;
-use App\Identity\Domain\User;
+use App\Identity\Infrastructure\Security\AuthenticatedUser;
 use App\Shared\Domain\DomainError;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminRoute;
 use Symfony\Component\HttpFoundation\Request;
@@ -221,7 +221,7 @@ class EventController extends AbstractAdminController
     {
         $user = $this->getUser();
 
-        return $user instanceof User ? $user->getId() : null;
+        return $user instanceof AuthenticatedUser ? $user->id : null;
     }
 
     /**

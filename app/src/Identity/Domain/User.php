@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Identity\Domain;
 
 use App\Shared\Domain\DomainEntity;
-use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
-use Symfony\Component\Security\Core\User\UserInterface;
 
-class User extends DomainEntity implements UserInterface, PasswordAuthenticatedUserInterface
+class User extends DomainEntity
 {
     private ?int $id = null;
 
@@ -27,7 +25,7 @@ class User extends DomainEntity implements UserInterface, PasswordAuthenticatedU
         UserRole $role,
     ): self {
         return new self(
-            email: mb_strtolower($email),
+            email: UserCredentials::requireEmail($email),
             password: $password,
             role: $role,
             active: true,
@@ -37,7 +35,7 @@ class User extends DomainEntity implements UserInterface, PasswordAuthenticatedU
 
     public function update(string $email, UserRole $role, bool $active): void
     {
-        $this->email = mb_strtolower($email);
+        $this->email = UserCredentials::requireEmail($email);
         $this->role = $role;
         $this->active = $active;
     }
@@ -47,9 +45,9 @@ class User extends DomainEntity implements UserInterface, PasswordAuthenticatedU
         $this->password = $password;
     }
 
-    public function isAdmin(): bool
+    public function isActiveAdmin(): bool
     {
-        return UserRole::Admin === $this->role;
+        return $this->active && UserRole::Admin === $this->role;
     }
 
     public function getId(): int
@@ -72,28 +70,7 @@ class User extends DomainEntity implements UserInterface, PasswordAuthenticatedU
         return $this->active;
     }
 
-    public function getCreatedAt(): \DateTimeImmutable
-    {
-        return $this->createdAt;
-    }
-
-    #[\Override]
-    public function getUserIdentifier(): string
-    {
-        return $this->email;
-    }
-
-    /**
-     * @return list<string>
-     */
-    #[\Override]
-    public function getRoles(): array
-    {
-        return [$this->role->value];
-    }
-
-    #[\Override]
-    public function getPassword(): string
+    public function getPasswordHash(): string
     {
         return $this->password;
     }

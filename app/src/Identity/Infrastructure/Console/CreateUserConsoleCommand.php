@@ -1,8 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Identity\Infrastructure\Console;
 
 use App\Identity\Application\CreateUser\CreateUserCommand;
+use App\Identity\Domain\InvalidUserCredentials;
+use App\Identity\Domain\UserCredentials;
 use App\Identity\Domain\UserRole;
 use App\Shared\Domain\DomainError;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -24,7 +28,6 @@ final class CreateUserConsoleCommand extends Command
         parent::__construct();
     }
 
-    //        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
     protected function configure(): void
     {
         $this
@@ -50,8 +53,8 @@ final class CreateUserConsoleCommand extends Command
             $password = $io->askQuestion($question);
         }
 
-        if (!is_string($password) || mb_strlen($password) < 8) {
-            $io->error('Пароль должен быть не короче 8 символов');
+        if (!is_string($password)) {
+            $io->error('Пароль должен быть не короче '.UserCredentials::PASSWORD_MIN_LENGTH.' символов');
 
             return Command::INVALID;
         }
@@ -63,7 +66,7 @@ final class CreateUserConsoleCommand extends Command
             if ($previous instanceof DomainError) {
                 $io->error($previous->getMessage());
 
-                return Command::FAILURE;
+                return $previous instanceof InvalidUserCredentials ? Command::INVALID : Command::FAILURE;
             }
 
             throw $exception;

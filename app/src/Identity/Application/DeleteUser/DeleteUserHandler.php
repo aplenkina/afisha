@@ -1,31 +1,36 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Identity\Application\DeleteUser;
 
-use App\Identity\Domain\LastAdminProtected;
-use App\Identity\UserRepositoryInterface;
-use App\Shared\Application\FlusherInterface;
+use App\Identity\Application\UserRepository;
+use App\Identity\Application\UserTransaction;
+use App\Identity\Domain\ActiveAdminPolicy;
+use App\Identity\Domain\SelfDeletionForbidden;
 use App\Shared\Bus\Command\HandlerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
 final readonly class DeleteUserHandler implements HandlerInterface
 {
-    public function __construct(
-        private UserRepositoryInterface $userRepository,
-        private FlusherInterface $flusher,
-    ) {
+    public function __construct(private UserRepository $users, private UserTransaction $transaction)
+    {
     }
 
     public function __invoke(DeleteUserCommand $command): void
     {
-        $user = $this->userRepository->findById($command->id);
-
-        if ($user->isAdmin() && $user->isActive() && $this->userRepository->countActiveAdmins() <= 1) {
-            throw new LastAdminProtected();
+        if ($command->actorId === $command->id) {
+            throw new SelfDeletionForbidden();
         }
 
-        $this->userRepository->delete($user);
-        $this->flusher->flush();
+        $this->transaction->run(function () use ($command): void {
+            $user = $this->users->findById($command->id);
+            if ($user->isActiveAdmin()) {
+                ActiveAdminPolicy::ensureAdminRemains($this->users->countActiveAdmins());
+            }
+
+            $this->users->delete($user);
+        });
     }
 }

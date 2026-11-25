@@ -1,46 +1,60 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Identity\Application\UpdateUser;
 
-use App\Identity\Domain\LastAdminProtected;
-use App\Identity\Domain\User;
+use App\Identity\Application\UserPasswordHasher;
+use App\Identity\Application\UserRepository;
+use App\Identity\Application\UserTransaction;
+use App\Identity\Domain\ActiveAdminPolicy;
+use App\Identity\Domain\UserCredentials;
 use App\Identity\Domain\UserEmailTaken;
 use App\Identity\Domain\UserRole;
-use App\Identity\UserRepositoryInterface;
-use App\Shared\Application\FlusherInterface;
 use App\Shared\Bus\Command\HandlerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactoryInterface;
 
 #[AsMessageHandler]
 final readonly class UpdateUserHandler implements HandlerInterface
 {
     public function __construct(
-        private UserRepositoryInterface $userRepository,
-        private PasswordHasherFactoryInterface $hasherFactory,
-        private FlusherInterface $flusher,
+        private UserRepository $users,
+        private UserPasswordHasher $passwords,
+        private UserTransaction $transaction,
     ) {
     }
 
     public function __invoke(UpdateUserCommand $command): void
     {
-        $user = $this->userRepository->findById($command->id);
+        $email = UserCredentials::requireEmail($command->email);
+        $password = $this->hashNewPassword($command->plainPassword);
 
-        if ($this->userRepository->existsByEmail($command->email, $user->getId())) {
-            throw new UserEmailTaken(mb_strtolower($command->email));
+        $this->transaction->run(function () use ($command, $email, $password): void {
+            $user = $this->users->findById($command->id);
+            if ($this->users->existsByEmail($email, $user->getId())) {
+                throw new UserEmailTaken($email);
+            }
+
+            $staysActiveAdmin = UserRole::Admin === $command->role && $command->active;
+            if ($user->isActiveAdmin() && !$staysActiveAdmin) {
+                ActiveAdminPolicy::ensureAdminRemains($this->users->countActiveAdmins());
+            }
+
+            $user->update($email, $command->role, $command->active);
+            if (null !== $password) {
+                $user->changePassword($password);
+            }
+        });
+    }
+
+    private function hashNewPassword(?string $password): ?string
+    {
+        if (null === $password || '' === $password) {
+            return null;
         }
 
-        $staysActiveAdmin = UserRole::Admin === $command->role && $command->active;
-        if ($user->isAdmin() && $user->isActive() && !$staysActiveAdmin && $this->userRepository->countActiveAdmins() <= 1) {
-            throw new LastAdminProtected();
-        }
+        UserCredentials::requirePassword($password);
 
-        $user->update($command->email, $command->role, $command->active);
-
-        if (null !== $command->plainPassword && '' !== $command->plainPassword) {
-            $user->changePassword($this->hasherFactory->getPasswordHasher(User::class)->hash($command->plainPassword));
-        }
-
-        $this->flusher->flush();
+        return $this->passwords->hash($password);
     }
 }

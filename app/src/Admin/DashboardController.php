@@ -2,6 +2,7 @@
 
 namespace App\Admin;
 
+use App\Identity\Infrastructure\Http\UserController;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminDashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Assets;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
