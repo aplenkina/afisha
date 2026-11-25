@@ -1,19 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Telegram\Infrastructure\Doctrine;
 
 use App\Telegram\Application\SubscriberStore;
-use Doctrine\DBAL\Connection;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\DependencyInjection\Attribute\AsAlias;
 
+#[AsAlias(SubscriberStore::class)]
 final readonly class DoctrineSubscriberStore implements SubscriberStore
 {
-    public function __construct(private Connection $connection)
+    public function __construct(private EntityManagerInterface $entityManager)
     {
     }
 
     public function selectCity(int $chatId, int $cityId): void
     {
-        $this->connection->executeStatement(
+        $this->entityManager->getConnection()->executeStatement(
             <<<'SQL'
                 INSERT INTO tg_subscriber (chat_id, city_id, active, created_at)
                 VALUES (:chat, :city, true, now())
