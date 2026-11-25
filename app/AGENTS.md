@@ -14,6 +14,14 @@ This is a Symfony project. Check `composer.json` for the exact Symfony/PHP versi
 in use, and read `symfony.lock` to see which recipes ran. Don't assume Doctrine,
 Twig, API Platform, Messenger, or Lock are installed unless one of those says so.
 
+## Architecture
+
+Follow [the PHP architecture standard](ARCHITECTURE.md) for new and changed
+use cases. Keep business rules in the domain, use Symfony Messenger at the
+application boundary, and keep HTTP controllers thin. Put request constraints
+on typed DTOs and delegate response formatting to a presenter. Keep Doctrine
+repositories and their external XML mappings in the module's infrastructure.
+
 ## Ask before generating
 
 If the task doesn't specify, ask rather than guess:
@@ -39,7 +47,7 @@ because it isn't installed yet; installing it is one command.
 Follow https://symfony.com/doc/current/best_practices.html to write idiomatic
 Symfony:
 
-- Use PHP attributes for framework metadata, and not only on controllers:
+- Use PHP attributes for Symfony metadata at the framework boundary:
   `#[Route]`, `#[MapRequestPayload]`, `#[IsGranted]` on actions, `#[Assert\...]`
   on properties, `#[AsCommand]`, `#[AsEventListener]`, `#[AsMessageHandler]`, and
   `#[AsAlias]` / `#[AsTaggedItem]` / `#[Autoconfigure]` on services. No YAML or
@@ -49,9 +57,9 @@ Symfony:
   class with `#[Autowire]` (parameters, env vars, expressions) or `#[Target]` (one
   of several implementations of an interface). A YAML service definition is the
   last resort, not the first.
-- Controllers extend `AbstractController`, stay thin, and delegate to services.
+- Controllers delegate to application use cases and HTTP presenters.
 - Use the framework for what it already does: Form for server-rendered forms,
-  Validator for validation, Serializer for JSON, Messenger for async work,
+  Validator for validation, Serializer for JSON, Messenger for sync and async work,
   Security (voters, authenticators) for access control, Twig `path()`/`url()`
   instead of hardcoded URLs.
 - Before hand-writing infrastructure (locks, queues, caches, HTTP clients,
@@ -81,26 +89,33 @@ Three specifics worth spelling out, because they are easy to get wrong:
   passed up front and `--no-interaction` where supported: makers prompt on a
   terminal by default, which hangs a non-interactive shell. If a maker still
   needs interactive input, hand-write the code instead.
-- If Doctrine ORM is installed, schema changes go through migrations
-  (`bin/console make:migration`, then `doctrine:migrations:migrate`), never
-  `doctrine:schema:update` or hand-written SQL.
+- Apply schema changes through reviewed Doctrine migrations. Generate a
+  migration with `bin/console make:migration` when MakerBundle is available,
+  or use `bin/console doctrine:migrations:diff`. Run it with
+  `bin/console doctrine:migrations:migrate`. Apply schema changes exclusively
+  through the migration history.
 - `.env` is committed and holds defaults only. Real secrets belong in `.env.local`
   (git-ignored) or the secrets vault (`bin/console secrets:set`), read via
   `%env(...)%`.
 
 ## Testing
 
-Install `symfony/test-pack` if it isn't already. Functional/HTTP tests extend
-`WebTestCase`; service-level tests extend `KernelTestCase`. Run
-`php bin/phpunit` (falls back to `vendor/bin/phpunit`). A feature isn't done
-until it has a test that exercises it the way a caller would, an HTTP request for
-a controller or a service call for a service, not just "it didn't throw."
+Use PHPUnit `TestCase` for domain and application unit tests. Cover every
+public service method that has behavior. Use `WebTestCase` for HTTP contracts
+and `KernelTestCase` for integration tests that need Symfony's container.
+Check request DTOs and thin controllers through HTTP contracts. Run
+`vendor/bin/phpunit` from `app/`.
 
-## Code style
+## Formatting and unused code
 
-Symfony's coding standard, the `@Symfony` php-cs-fixer ruleset (a PSR-12-derived
-superset). Run `vendor/bin/php-cs-fixer fix` if `friendsofphp/php-cs-fixer` is
-installed; it isn't part of the skeleton by default.
+Apply the [formatting and cleanup rules](ARCHITECTURE.md#форматирование-и-чистота-репозитория)
+to source code, configuration, templates, scripts, and documentation. Use the
+same formatting rules for every file of a given type. Remove confirmed unused
+code and files with the change that makes them obsolete, after checking
+framework registration, deployment references, and supported consumers.
+Follow PSR-4 for autoloading and the `@Symfony` PHP-CS-Fixer ruleset in
+`.php-cs-fixer.dist.php` for formatting. Run `vendor/bin/php-cs-fixer check`
+from `app/`.
 
 ## Discover, don't guess
 

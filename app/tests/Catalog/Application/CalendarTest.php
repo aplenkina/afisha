@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Catalog\Application;
 
-use App\Catalog\Application\ShowCalendar\Calendar;
+use App\Catalog\Application\ShowCalendar\CalendarShowHandler;
+use App\Catalog\Application\ShowCalendar\CalendarShowMessage;
 use App\Catalog\Application\ShowCategoryEvents\CategoryEventView;
 use App\Catalog\Infrastructure\Repository\CategoryRepositoryInterface;
 use App\Catalog\Infrastructure\Repository\CityRepositoryInterface;
@@ -21,19 +22,19 @@ final class CalendarTest extends TestCase
         $events->expects(self::once())->method('findCalendarEvents')
             ->with(self::isInstanceOf(\DateTimeImmutable::class), null, null, false, null, '', 201, 200)
             ->willReturn(array_merge([$first], array_fill(0, 199, $second), [$this->occurrence('2034-12-08 19:00:00+00:00')]));
-        $calendar = new Calendar(
+        $calendar = new CalendarShowHandler(
             $this->createStub(CityRepositoryInterface::class),
             $events,
             $this->createStub(CategoryRepositoryInterface::class),
         );
 
-        $view = $calendar->show('all', '', false, page: 2);
+        $view = $calendar(new CalendarShowMessage('all', '', false, page: 2));
 
-        self::assertSame(['2034-12-05', '2034-12-06'], array_keys($view['days']));
-        self::assertSame($first, $view['days']['2034-12-05'][0]);
-        self::assertSame($second, $view['days']['2034-12-06'][0]);
-        self::assertSame(2, $view['page']);
-        self::assertTrue($view['hasNext']);
+        self::assertSame(['2034-12-05', '2034-12-06'], array_keys($view->days));
+        self::assertSame($first, $view->days['2034-12-05'][0]);
+        self::assertSame($second, $view->days['2034-12-06'][0]);
+        self::assertSame(2, $view->page);
+        self::assertTrue($view->hasNext);
     }
 
     private function occurrence(string $start): CategoryEventView

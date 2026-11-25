@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Telegram\Infrastructure\Console;
 
 use App\Shared\Domain\DomainError;
-use App\Telegram\Application\DigestPreview;
+use App\Telegram\Application\PreviewDigest;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -11,13 +13,19 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Messenger\Exception\HandlerFailedException;
+use Symfony\Component\Messenger\HandleTrait;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsCommand(name: 'app:digest:preview', description: 'Показать дайджест событий без отправки в Telegram')]
 final class PreviewDigestCommand extends Command
 {
-    public function __construct(private readonly DigestPreview $preview)
+    use HandleTrait;
+
+    public function __construct(MessageBusInterface $messageBus, private readonly DigestPresenter $presenter)
     {
         parent::__construct();
+        $this->messageBus = $messageBus;
     }
 
     protected function configure(): void
@@ -33,12 +41,22 @@ final class PreviewDigestCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $days = filter_var($input->getOption('days'), FILTER_VALIDATE_INT);
         try {
-            $messages = $this->preview->build($input->getArgument('city'), $days ?: 0, $input->getOption('free'), $input->getOption('category'));
-        } catch (DomainError|\InvalidArgumentException $error) {
+            $digest = $this->handle(new PreviewDigest(
+                $input->getArgument('city'),
+                $days ?: 0,
+                $input->getOption('free'),
+                $input->getOption('category'),
+            ));
+        } catch (HandlerFailedException $failure) {
+            $error = $failure->getPrevious();
+            if (!$error instanceof DomainError && !$error instanceof \InvalidArgumentException) {
+                throw $failure;
+            }
             $io->error($error->getMessage());
 
             return Command::INVALID;
         }
+        $messages = $this->presenter->format($digest);
         if ([] === $messages) {
             $io->note('Подходящих сеансов нет.');
         }

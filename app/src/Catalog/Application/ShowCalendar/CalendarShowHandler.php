@@ -1,13 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Catalog\Application\ShowCalendar;
 
 use App\Catalog\Domain\City;
 use App\Catalog\Infrastructure\Repository\CategoryRepositoryInterface;
 use App\Catalog\Infrastructure\Repository\CityRepositoryInterface;
 use App\Catalog\Infrastructure\Repository\EventRepositoryInterface;
+use App\Shared\Bus\Query\QueryHandlerInterface;
+use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-final readonly class Calendar
+#[AsMessageHandler]
+final readonly class CalendarShowHandler implements QueryHandlerInterface
 {
     private const int PAGE_SIZE = 200;
 
@@ -18,15 +23,15 @@ final readonly class Calendar
     ) {
     }
 
-    public function show(string $period, string $citySlug, bool $onlyFree, string $categoryAlias = '', string $dateFrom = '', string $dateTo = '', string $search = '', int $page = 1): array
+    public function __invoke(CalendarShowMessage $message): CalendarShowResponse
     {
-        $search = mb_substr(trim($search), 0, 120);
+        $search = mb_substr(trim($message->search), 0, 120);
         $zone = new \DateTimeZone('Europe/Minsk');
         $now = new \DateTimeImmutable('now', $zone);
         $today = $now->setTime(0, 0);
         $weekday = (int) $today->format('N');
         $saturday = $today->modify(sprintf('%+d days', 6 - $weekday));
-        $period = in_array($period, ['today', 'tomorrow', 'weekend', 'week', 'all', 'custom'], true) ? $period : 'weekend';
+        $period = in_array($message->period, ['today', 'tomorrow', 'weekend', 'week', 'all', 'custom'], true) ? $message->period : 'weekend';
         [$from, $until] = match ($period) {
             'today' => [$today, $today->modify('+1 day')],
             'tomorrow' => [$today->modify('+1 day'), $today->modify('+2 days')],
@@ -36,8 +41,8 @@ final readonly class Calendar
         };
         $dateError = null;
         if ('custom' === $period) {
-            $from = self::parseDate($dateFrom, $zone);
-            $lastDay = self::parseDate($dateTo, $zone);
+            $from = self::parseDate($message->dateFrom, $zone);
+            $lastDay = self::parseDate($message->dateTo, $zone);
             if (null === $from || null === $lastDay) {
                 $dateError = 'Укажи дату начала и дату окончания.';
             } elseif ($from > $lastDay) {
@@ -50,7 +55,7 @@ final readonly class Calendar
         $cities = array_filter($this->cities->findAll(), static fn (City $city): bool => $city->isAvailable());
         $selectedCity = null;
         foreach ($cities as $city) {
-            if ($city->getSlug() === $citySlug) {
+            if ($city->getSlug() === $message->citySlug) {
                 $selectedCity = $city;
                 break;
             }
@@ -60,17 +65,17 @@ final readonly class Calendar
         $selectedCategory = null;
         foreach ($this->categories->findAll(onlyAvailable: true) as $category) {
             $categories[] = $category;
-            if ($category->getAlias() === $categoryAlias) {
+            if ($category->getAlias() === $message->categoryAlias) {
                 $selectedCategory = $category;
             }
         }
 
         $days = [];
         $hasNext = false;
-        $page = max(1, min($page, intdiv(PHP_INT_MAX, self::PAGE_SIZE)));
+        $page = max(1, min($message->page, intdiv(PHP_INT_MAX, self::PAGE_SIZE)));
         if (null === $dateError && (null === $until || max($from, $now) < $until)) {
             $events = $this->events->findCalendarEvents(
-                max($from, $now), $until, $selectedCity?->getId(), $onlyFree, $selectedCategory?->getId(), $search,
+                max($from, $now), $until, $selectedCity?->getId(), $message->onlyFree, $selectedCategory?->getId(), $search,
                 limit: self::PAGE_SIZE + 1, offset: ($page - 1) * self::PAGE_SIZE,
             );
             $hasNext = count($events) > self::PAGE_SIZE;
@@ -79,7 +84,10 @@ final readonly class Calendar
             }
         }
 
-        return compact('cities', 'selectedCity', 'categories', 'selectedCategory', 'period', 'onlyFree', 'days', 'dateFrom', 'dateTo', 'dateError', 'search', 'page', 'hasNext');
+        return new CalendarShowResponse(
+            $cities, $selectedCity, $categories, $selectedCategory, $period, $message->onlyFree,
+            $days, $message->dateFrom, $message->dateTo, $dateError, $search, $page, $hasNext,
+        );
     }
 
     private static function parseDate(string $value, \DateTimeZone $zone): ?\DateTimeImmutable

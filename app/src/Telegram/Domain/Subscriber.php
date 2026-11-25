@@ -8,12 +8,9 @@ use App\Catalog\Domain\City;
 
 final class Subscriber
 {
-    private ?int $id = null;
-    private bool $active = true;
+    private int $id;
+    private int $chatId;
+    private bool $active;
     private \DateTimeImmutable $createdAt;
-
-    public function __construct(private int $chatId, private City $city)
-    {
-        $this->createdAt = new \DateTimeImmutable();
-    }
+    private City $city;
 }
