@@ -29,6 +29,11 @@
         <field name="status" length="16" enum-type="App\Catalog\Domain\EventStatus" />
         <field name="sourceId" type="integer" column="source_id" nullable="true" />
         <field name="externalId" column="external_id" length="128" nullable="true" />
+        <field name="importObservation" type="json" column="import_observation" nullable="true">
+            <options>
+                <option name="jsonb">true</option>
+            </options>
+        </field>
         <field name="createdBy" type="integer" column="created_by" nullable="true" />
         <field name="createdAt" type="datetimetz_immutable" />
         <field name="updatedAt" type="datetimetz_immutable" />

@@ -55,17 +55,34 @@ func (r *Runner) now() time.Time {
 // RunOnce обходит включённые источники из таблицы source и в конце присылает одну сводку.
 // Падение одного источника не мешает остальным.
 func (r *Runner) RunOnce(ctx context.Context) {
+	r.run(ctx, false, "")
+}
+
+func (r *Runner) RefreshRecent(ctx context.Context) {
+	r.run(ctx, true, "")
+}
+
+// RunSourceOnce runs one explicitly selected source independently of its schedule.
+func (r *Runner) RunSourceOnce(ctx context.Context, slug string) bool {
+	return r.run(ctx, false, slug)
+}
+
+type recentCollector interface {
+	CollectRecent(context.Context) (collector.Result, error)
+}
+
+func (r *Runner) run(ctx context.Context, recent bool, onlySource string) bool {
 	started := r.now()
 
 	cities, err := r.Store.Cities(ctx)
 	if err != nil {
 		r.Notifier.Send(ctx, "Сборщики: не прочитались города: "+err.Error())
-		return
+		return false
 	}
 	categories, err := r.Store.Categories(ctx)
 	if err != nil {
 		r.Notifier.Send(ctx, "Сборщики: не прочитались категории: "+err.Error())
-		return
+		return false
 	}
 	categoryNames, err := r.Store.CategoryNames(ctx)
 	if err != nil {
@@ -75,7 +92,7 @@ func (r *Runner) RunOnce(ctx context.Context) {
 	sources, err := r.Store.Sources(ctx)
 	if err != nil {
 		r.Notifier.Send(ctx, "Сборщики: не прочитались источники: "+err.Error())
-		return
+		return false
 	}
 
 	cityNames := make(map[int]string, len(cities))
@@ -88,13 +105,16 @@ func (r *Runner) RunOnce(ctx context.Context) {
 	for _, src := range sources {
 		log := r.Log.With("source", src.Slug)
 
-		if !src.Available {
+		if (recent && src.Slug != "bezkassira") || (onlySource != "" && src.Slug != onlySource) {
+			continue
+		}
+		if !src.Available && onlySource == "" {
 			log.Info("источник выключен в админке, пропускаем")
 			sum.Disabled++
 			continue
 		}
 
-		c, report, ok := r.collectorFor(ctx, src, cityNames[src.CityID])
+		c, report, ok := r.collectorFor(ctx, src, cityNames[src.CityID], recent)
 		if !ok {
 			if report == nil {
 				sum.NoCollector++
@@ -104,20 +124,32 @@ func (r *Runner) RunOnce(ctx context.Context) {
 			continue
 		}
 
-		sum.Reports = append(sum.Reports, r.runCollector(ctx, log, src, c, cities, categories))
+		sum.Reports = append(sum.Reports, r.runCollector(ctx, log, src, c, cities, categories, recent))
 	}
 
 	sum.Took = r.now().Sub(started)
 
 	// Если запускать было нечего (всё выключено или без настроек), присылать нечего.
-	if len(sum.Reports) > 0 {
+	if len(sum.Reports) > 0 && (!recent || !sum.healthy()) {
 		r.Notifier.Send(ctx, sum.Format())
 	}
+	if len(sum.Reports) == 0 {
+		if onlySource != "" {
+			r.Log.Error("нет настроенного сборщика для источника", "source", onlySource)
+		}
+		return false
+	}
+	for _, report := range sum.Reports {
+		if report.Status != StatusOK || report.Failed > 0 {
+			return false
+		}
+	}
+	return true
 }
 
 // collectorFor подбирает сборщик. Если не вышло: report == nil — настроек нет совсем (просто пропускаем),
 // report != nil — настройки есть, но некорректны (попадает в сводку как ошибка).
-func (r *Runner) collectorFor(ctx context.Context, src store.SourceRow, cityName string) (collector.Collector, *SourceReport, bool) {
+func (r *Runner) collectorFor(ctx context.Context, src store.SourceRow, cityName string, recent bool) (collector.Collector, *SourceReport, bool) {
 	if c, ok := r.Custom[src.Slug]; ok {
 		return c, nil, true
 	}
@@ -129,13 +161,15 @@ func (r *Runner) collectorFor(ctx context.Context, src store.SourceRow, cityName
 	c, err := r.Factory(src, cityName)
 	if err != nil {
 		msg := "некорректные настройки сборщика: " + err.Error()
-		r.record(ctx, src, StatusError, msg)
+		if !recent {
+			r.record(ctx, src, StatusError, msg)
+		}
 		return nil, &SourceReport{Slug: src.Slug, Name: src.Name, Status: StatusError, Err: msg}, false
 	}
 	return c, nil, true
 }
 
-func (r *Runner) runCollector(ctx context.Context, log *slog.Logger, src store.SourceRow, c collector.Collector, cities, categories map[string]int) SourceReport {
+func (r *Runner) runCollector(ctx context.Context, log *slog.Logger, src store.SourceRow, c collector.Collector, cities, categories map[string]int, recent bool) SourceReport {
 	started := r.now()
 	rep := SourceReport{Slug: src.Slug, Name: src.Name, NewByCategory: map[string]int{}}
 	finish := func() SourceReport {
@@ -143,29 +177,59 @@ func (r *Runner) runCollector(ctx context.Context, log *slog.Logger, src store.S
 		return rep
 	}
 
-	res, err := c.Collect(ctx)
+	collect := c.Collect
+	if recent {
+		collector, ok := c.(recentCollector)
+		if !ok {
+			rep.Status = StatusOK
+			return finish()
+		}
+		collect = collector.CollectRecent
+	}
+	res, err := collect(ctx)
 	rep.Stats = res.Stats
 	if err != nil {
 		rep.Status, rep.Err = StatusError, "сборщик упал: "+err.Error()
-		r.record(ctx, src, StatusError, rep.Err)
+		if !recent {
+			r.record(ctx, src, StatusError, rep.Err)
+		}
 		return finish()
 	}
 	if len(res.Events) == 0 {
+		if res.AllowEmpty {
+			rep.Status = StatusOK
+			summary := fmt.Sprintf("предстоящих событий нет, прошедших %d", res.Stats.Past)
+			log.Info(summary)
+			if !recent {
+				r.record(ctx, src, StatusOK, summary)
+			}
+			return finish()
+		}
+		if recent && res.Stats.DetailsFailed == 0 && res.Stats.Broken == 0 && res.Stats.PagesBlocked == 0 {
+			rep.Status = StatusOK
+			return finish()
+		}
 		rep.Status = StatusEmpty
-		r.record(ctx, src, StatusEmpty, "источник вернул 0 событий")
+		if !recent {
+			r.record(ctx, src, StatusEmpty, "источник вернул 0 событий")
+		}
 		return finish()
 	}
 
 	rep.Collected = len(res.Events)
 	for _, e := range res.Events {
 		cityID, ok := matchCity(cities, e.CityHints)
+		stateOnly := e.Observation != nil && e.Title == ""
+		if stateOnly {
+			cityID, ok = src.CityID, true
+		}
 		if !ok {
 			log.Debug("город не найден", "hints", e.CityHints, "title", e.Title)
 			rep.NoCity++
 			continue
 		}
 		categoryID, ok := categories[e.CategoryAlias]
-		if !ok {
+		if !ok && !stateOnly {
 			log.Warn("категории нет в базе", "alias", e.CategoryAlias, "title", e.Title)
 			rep.NoCategory++
 			continue
@@ -187,16 +251,29 @@ func (r *Runner) runCollector(ctx context.Context, log *slog.Logger, src store.S
 
 	line := fmt.Sprintf("собрано %d, новых %d, обновлено %d, пропущено %d, ошибок %d",
 		rep.Collected, rep.Created, rep.Updated, rep.NoCity+rep.NoCategory, rep.Failed)
+	if src.Slug == "bezkassira" {
+		review := 0
+		for _, e := range res.Events {
+			if o := e.Observation; o != nil && (len(o.Issues) > 0 || !o.HasConfirmedSession()) {
+				review++
+			}
+		}
+		line += fmt.Sprintf(", на проверку %d, карточек не загрузилось %d", review, rep.Stats.DetailsFailed)
+	}
 	log.Info("сборщик завершён", "took", r.now().Sub(started).Round(time.Second), "summary", line)
 
 	if rep.Created+rep.Updated == 0 {
 		rep.Status, rep.Err = StatusError, "ничего не сохранилось: "+line
-		r.record(ctx, src, StatusError, rep.Err)
+		if !recent {
+			r.record(ctx, src, StatusError, rep.Err)
+		}
 		return finish()
 	}
 
 	rep.Status = StatusOK
-	r.record(ctx, src, StatusOK, line)
+	if !recent {
+		r.record(ctx, src, StatusOK, line)
+	}
 	return finish()
 }
 

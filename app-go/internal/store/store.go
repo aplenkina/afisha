@@ -154,6 +154,14 @@ func (s *Store) Save(ctx context.Context, sourceID, cityID, categoryID int, e co
 		return false, err
 	}
 
+	if e.Observation != nil {
+		created, err := s.saveObservation(ctx, tx, sourceID, cityID, categoryID, e)
+		if err != nil {
+			return false, err
+		}
+		return created, tx.Commit(ctx)
+	}
+
 	var venueID *int
 	if e.VenueName != "" {
 		id, err := ensureVenue(ctx, tx, cityID, e.VenueName, e.Address)

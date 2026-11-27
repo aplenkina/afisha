@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"afisha/internal/collector"
+	"afisha/internal/collector/citydog"
 	"afisha/internal/collector/jsonld"
 	"afisha/internal/fetch"
 	"afisha/internal/notify"
@@ -52,10 +53,33 @@ func databaseURL() string {
 	return u.String()
 }
 
+type bezKassiraDraftCollector struct{ *jsonld.BezKassira }
+
+func (c bezKassiraDraftCollector) Collect(ctx context.Context) (collector.Result, error) {
+	result, err := c.CollectRecent(ctx)
+	for _, event := range result.Events {
+		event.Observation.DraftsOnly = true
+	}
+	return result, err
+}
+
 func main() {
 	once := flag.Bool("once", false, "один прогон сборщиков и выход")
+	source := flag.String("source", "", "код источника для прогона с -once")
+	draftsOnly := flag.Bool("drafts-only", false, "перепроверить только существующие черновики BezKassira")
+	publishBez := flag.Bool("publish-bezkassira", false, "сводка по автопубликации черновиков BezKassira")
+	apply := flag.Bool("apply", false, "сохранить статусы и включить автопубликацию BezKassira")
 	notifyTest := flag.Bool("notify-test", false, "отправить проверочное сообщение в Telegram и выйти")
 	flag.Parse()
+	if (*apply && !*publishBez) || (*publishBez && (*once || *notifyTest)) {
+		log.Fatal("-apply используется только с -publish-bezkassira, без -once и -notify-test")
+	}
+	if *draftsOnly && (!*once || *source != "bezkassira") {
+		log.Fatal("-drafts-only используется только с -once -source bezkassira")
+	}
+	if *source != "" && (!*once || *notifyTest) {
+		log.Fatal("-source используется только с -once")
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -78,12 +102,24 @@ func main() {
 	}
 	defer pool.Close()
 
+	st := store.New(pool)
+	if *publishBez {
+		result, err := st.PublishBezKassiraDrafts(ctx, *apply)
+		if err != nil {
+			log.Fatalf("проверка автопубликации: %v", err)
+		}
+		fmt.Printf("публикация: %d; дубли: %d; проверка: %d; конфликты источников: %d; применено: %t\n",
+			result.Published, result.Duplicate, result.Review, result.Conflict, *apply)
+		return
+	}
+
 	// Честный User-Agent с контактом: COLLECTOR_CONTACT=почта или адрес сайта.
 	ua := userAgentToken + "/0.1"
 	if c := os.Getenv("COLLECTOR_CONTACT"); c != "" {
 		ua += " (" + c + ")"
 	}
 	client := fetch.New(ua, 2*time.Second)
+	bezClient := fetch.New(ua, 750*time.Millisecond)
 
 	telegram := notify.NewTelegram(envOrFile("TELEGRAM_BOT_TOKEN"), envOrFile("TELEGRAM_CHAT_ID"), logger)
 	if *notifyTest {
@@ -99,14 +135,29 @@ func main() {
 		log.Fatal(err)
 	}
 
-	st := store.New(pool)
 	r := &runner.Runner{
 		Store:  st,
 		Custom: map[string]collector.Collector{}, // сюда регистрируются сборщики под конкретный сайт
 		Factory: func(src store.SourceRow, cityName string) (collector.Collector, error) {
+			if src.Slug == "citydog" {
+				return citydog.New(src.Name, cityName, src.URL, userAgentToken, client, minsk, logger)
+			}
 			cfg, err := jsonld.ParseConfig([]byte(src.Config))
 			if err != nil {
 				return nil, err
+			}
+			if src.Slug == "bezkassira" {
+				bez := jsonld.NewBezKassira(src.Name, src.URL, cityName, cfg, bezClient, userAgentToken, logger,
+					func(ctx context.Context, recent bool) ([]string, error) {
+						if *draftsOnly {
+							return st.DraftBezKassiraURLs(ctx, src.ID)
+						}
+						return st.KnownEventURLs(ctx, src.ID, recent)
+					})
+				if *draftsOnly {
+					return bezKassiraDraftCollector{bez}, nil
+				}
+				return bez, nil
 			}
 			return jsonld.New(src.Slug, src.Name, src.URL, cityName, cfg, client, userAgentToken, logger), nil
 		},
@@ -116,7 +167,11 @@ func main() {
 	}
 
 	if *once {
-		r.RunOnce(ctx)
+		if *source == "" {
+			r.RunOnce(ctx)
+		} else if !r.RunSourceOnce(ctx, *source) {
+			log.Fatal("сбор источника не завершился успешно")
+		}
 		return
 	}
 
@@ -167,5 +222,26 @@ func schedule(ctx context.Context, r *runner.Runner, st *store.Store, logger *sl
 	}
 
 	logger.Info("планировщик запущен", "daily_at", at, "zone", loc.String())
-	s.Loop(ctx, 30*time.Second, func(err error) { logger.Error("планировщик", "err", err) })
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	const refreshInterval = 3 * time.Hour
+	nextRefresh := time.Now().Truncate(refreshInterval).Add(refreshInterval)
+	for {
+		ran, err := s.Tick(ctx)
+		if err != nil {
+			logger.Error("планировщик", "err", err)
+		}
+		now := time.Now()
+		if !now.Before(nextRefresh) {
+			nextRefresh = now.Truncate(refreshInterval).Add(refreshInterval)
+			if !ran {
+				r.RefreshRecent(ctx)
+			}
+		}
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			return
+		}
+	}
 }
