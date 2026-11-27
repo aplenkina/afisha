@@ -11,6 +11,7 @@ use App\Shared\Domain\DomainError;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Session\FlashBagAwareSessionInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Twig\Environment;
 
@@ -38,17 +39,27 @@ final readonly class EventFormPresenter
 
     public function saved(int $id): RedirectResponse
     {
-        $this->requests->getSession()->getFlashBag()->add('success', 'Событие сохранено');
+        $this->flash('success', 'Событие сохранено');
 
         return new RedirectResponse($this->urls->generate('admin_event_details', ['id' => $id]));
     }
 
     public function failed(DomainError $error, ?int $id): RedirectResponse
     {
-        $this->requests->getSession()->getFlashBag()->add('danger', $error->getMessage());
+        $this->flash('danger', $error->getMessage());
 
         return new RedirectResponse(null === $id
             ? $this->urls->generate('admin_event_new')
             : $this->urls->generate('admin_event_details', ['id' => $id]));
+    }
+
+    private function flash(string $type, string $message): void
+    {
+        $session = $this->requests->getSession();
+        if (!$session instanceof FlashBagAwareSessionInterface) {
+            throw new \LogicException('The event form requires a session with flash messages.');
+        }
+
+        $session->getFlashBag()->add($type, $message);
     }
 }

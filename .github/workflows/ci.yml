@@ -24,9 +24,7 @@ jobs:
           cp .env.example .env
           cp .env.test.example .env.test
       - run: composer install --no-interaction --prefer-dist
-      - run: composer cs:check
-      - run: composer lint
-      - run: composer test
+      - run: composer check
 
   go:
     runs-on: ubuntu-latest

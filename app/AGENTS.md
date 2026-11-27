@@ -114,8 +114,10 @@ same formatting rules for every file of a given type. Remove confirmed unused
 code and files with the change that makes them obsolete, after checking
 framework registration, deployment references, and supported consumers.
 Follow PSR-4 for autoloading and the `@Symfony` PHP-CS-Fixer ruleset in
-`.php-cs-fixer.dist.php` for formatting. Run `vendor/bin/php-cs-fixer check`
-from `app/`.
+`.php-cs-fixer.dist.php` for formatting. Run `composer cs:check` from `app/` to check formatting and
+`composer cs:fix` to apply it. Run `composer analyse` for PHPStan or
+`composer check` for the same checks as CI. Keep the PHPStan baseline limited to existing
+findings and remove entries as they are addressed.
 
 ## Discover, don't guess
 

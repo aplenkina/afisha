@@ -22,6 +22,7 @@ use PHPUnit\Framework\TestCase;
 
 final class EventWriteHandlersTest extends TestCase
 {
+    /** @param 'foreign'|'duplicate'|'chronology' $reason */
     #[DataProvider('invalidSessions')]
     public function testInvalidUpdateLeavesEventUntouched(string $reason): void
     {

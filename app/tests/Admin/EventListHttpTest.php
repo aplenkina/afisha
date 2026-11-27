@@ -95,6 +95,17 @@ final class EventListHttpTest extends WebTestCase
         self::assertSelectorNotExists('a[href="/admin/event/46"]');
     }
 
+    public function testLegacyFilterMenuOpensTheEventFilters(): void
+    {
+        $client = self::createClient();
+        $this->setUserProvider();
+        $client->loginUser(new AuthenticatedUser(2, 'admin@example.test', UserRole::Admin, 'hash-admin', true), 'identity');
+
+        $client->request('GET', '/admin/filter');
+
+        self::assertResponseRedirects('/admin/event');
+    }
+
     private function setUserProvider(): void
     {
         $provider = $this->createStub(UserProviderInterface::class);
