@@ -11,7 +11,7 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-#[AsCommand(name: 'app:event:mark-duplicates', description: 'Отмечает дубли опубликованных событий по месту и времени сеансов')]
+#[AsCommand(name: 'app:event:mark-duplicates', description: 'Отмечает дубли опубликованных событий по названию, городу и времени сеансов')]
 final readonly class MarkDuplicateEventsCommand
 {
     public function __construct(

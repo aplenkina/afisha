@@ -143,12 +143,30 @@ things up in the project instead of relying on memory:
 - The homepage defaults to the nearest weekend. The «Все даты» filter shows
   upcoming events across all dates and supports pagination.
 - Before marking a card as a duplicate, match the title (ignoring case and
-  extra whitespace), venue, start date and start time for every non-cancelled
-  session on that card. A missing venue cannot establish a match. Use the same
-  rule for publication, moderator selection and the batch command.
+  extra whitespace), city, and start date and time for every non-cancelled
+  session on that card. Ignore venue. Use the same rule for publication,
+  moderator selection and the batch command.
 - Marking a duplicate keeps both schedules intact. If the collector imports an
   unmatched session into a linked duplicate, it restores that card to draft
   for review. Existing duplicate statuses are preserved during deployment.
+
+### Imported event titles
+
+- Extract the actual title from the source's event name before changing case
+  or removing punctuation. Use explicit programme or film labels and paired
+  quotes where their role is clear. Strip event-type prefixes only when a
+  verified source format identifies them. Include a subtitle that forms part
+  of the title.
+- Compare extracted titles using a lowercase key with all whitespace and
+  punctuation removed. Apply the same city and session matching rules as for
+  other duplicates. Mark a matching card as a duplicate and exclude it from
+  publication.
+- Format the public title from the extracted text. Capitalise its first letter
+  and use lowercase for the remaining letters. Preserve spaces, colons and
+  commas in their original positions, as in `Чёрная пантера: ваканда навеки`.
+- Show «Проверка названия» with the reason in the admin interface when title
+  extraction is ambiguous. Flag `концерт для скрипки` in the source name before
+  stripping event-type prefixes, regardless of case, whitespace or punctuation.
 
 ## Operations and monitoring
 

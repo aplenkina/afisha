@@ -14,6 +14,7 @@
         </unique-constraints>
 
         <field name="title" length="255" />
+        <field name="titleReviewReason" type="text" column="title_review_reason" nullable="true" />
         <field name="slug" length="255" />
         <field name="description" type="text" nullable="true" />
         <field name="categoryId" type="integer" column="category_id" />

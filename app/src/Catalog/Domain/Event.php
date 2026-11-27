@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Catalog\Domain;
 
 use App\Shared\Domain\DomainEntity;
-use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 
@@ -20,9 +19,7 @@ class Event extends DomainEntity
 
     private ?self $duplicateOf = null;
 
-    /** @var array<string, mixed>|null */
-    private ?array $importObservation = null;
-
+    /** @param array<string, mixed>|null $importObservation */
     public function __construct(
         private string $title,
         private string $slug,
@@ -41,8 +38,10 @@ class Event extends DomainEntity
         private ?int $sourceId,
         private ?string $externalId,
         private ?int $createdBy,
-        private DateTimeImmutable $createdAt,
-        private DateTimeImmutable $updatedAt,
+        private \DateTimeImmutable $createdAt,
+        private \DateTimeImmutable $updatedAt,
+        private ?string $titleReviewReason = null,
+        private ?array $importObservation = null,
     ) {
         $this->sessions = new ArrayCollection();
     }
@@ -65,7 +64,7 @@ class Event extends DomainEntity
         ?string $externalId = null,
         ?int $createdBy = null,
     ): self {
-        $now = new DateTimeImmutable();
+        $now = new \DateTimeImmutable();
 
         return new self(
             title: $title,
@@ -105,7 +104,10 @@ class Event extends DomainEntity
         ?string $sourceUrl,
         ?string $ticketUrl,
     ): void {
-        $this->title = $title;
+        if ($this->title !== $title) {
+            $this->titleReviewReason = null;
+            $this->title = $title;
+        }
         $this->slug = $slug;
         $this->description = $description;
         $this->categoryId = $categoryId;
@@ -153,8 +155,8 @@ class Event extends DomainEntity
     }
 
     public function addSession(
-        DateTimeImmutable $startsAt,
-        ?DateTimeImmutable $endsAt = null,
+        \DateTimeImmutable $startsAt,
+        ?\DateTimeImmutable $endsAt = null,
         ?int $venueId = null,
         ?string $ticketUrl = null,
     ): EventSession {
@@ -198,6 +200,11 @@ class Event extends DomainEntity
     public function getTitle(): string
     {
         return $this->title;
+    }
+
+    public function getTitleReviewReason(): ?string
+    {
+        return $this->titleReviewReason;
     }
 
     public function getSlug(): string
@@ -258,7 +265,7 @@ class Event extends DomainEntity
     public function getInstagramPostUrl(): ?string
     {
         foreach ([$this->importObservation['originalUrl'] ?? null, $this->sourceUrl] as $url) {
-            if (is_string($url) && preg_match('~^https://(?:www\.)?instagram\.com/((?:p|reel)/[A-Za-z0-9_-]+)/?(?:[?#].*)?$~iD', $url, $match) === 1) {
+            if (is_string($url) && 1 === preg_match('~^https://(?:www\.)?instagram\.com/((?:p|reel)/[A-Za-z0-9_-]+)/?(?:[?#].*)?$~iD', $url, $match)) {
                 return 'https://www.instagram.com/'.$match[1].'/';
             }
         }
@@ -297,12 +304,12 @@ class Event extends DomainEntity
         return $this->createdBy;
     }
 
-    public function getCreatedAt(): DateTimeImmutable
+    public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
     }
 
-    public function getUpdatedAt(): DateTimeImmutable
+    public function getUpdatedAt(): \DateTimeImmutable
     {
         return $this->updatedAt;
     }
@@ -318,7 +325,7 @@ class Event extends DomainEntity
     private function changeStatus(EventStatus $status): void
     {
         $this->status = $status;
-        if ($status !== EventStatus::Duplicate) {
+        if (EventStatus::Duplicate !== $status) {
             $this->duplicateOf = null;
         }
         $this->touch();
@@ -326,6 +333,6 @@ class Event extends DomainEntity
 
     private function touch(): void
     {
-        $this->updatedAt = new DateTimeImmutable();
+        $this->updatedAt = new \DateTimeImmutable();
     }
 }

@@ -47,6 +47,12 @@
 {% endblock %}
 
 {% block main %}
+    {% if event and event.titleReviewReason %}
+        <div class="alert alert-warning" role="status">
+            <strong>Проверка названия</strong>
+            <p class="mb-0">{{ event.titleReviewReason }}</p>
+        </div>
+    {% endif %}
     {% if event and event.importObservation %}
         {% set observation = event.importObservation %}
         {% set import_source = observation.sourceName|default('BezKassira') %}
@@ -96,7 +102,7 @@
     {% if duplicates|default([]) is not empty %}
         <section class="admin-card" aria-labelledby="duplicate-events-title">
             <h2 id="duplicate-events-title">Возможные дубли</h2>
-            <p>Для каждого сеанса этой карточки у найденного события совпадают название, место, дата и время начала.</p>
+            <p>У событий совпадают название и город. Для каждого действующего сеанса этой карточки есть сеанс с тем же временем начала. Площадка может отличаться.</p>
             <ul class="mb-0">
                 {% for duplicate in duplicates %}
                     <li>

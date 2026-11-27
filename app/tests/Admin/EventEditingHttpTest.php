@@ -8,6 +8,7 @@ use App\Admin\Application\EventForm\EventFormOptions;
 use App\Admin\Application\EventForm\EventFormOptionsRepository;
 use App\Catalog\Application\EventEditing\EventEditingRepository;
 use App\Catalog\Application\EventEditing\EventReferences;
+use App\Catalog\Application\EventEditing\ImportedEventComparisons;
 use App\Catalog\Domain\Event;
 use App\Catalog\Domain\EventSession;
 use App\Catalog\Domain\SessionStatus;
@@ -79,9 +80,10 @@ final class EventEditingHttpTest extends WebTestCase
     {
         $client = $this->editor();
         $event = self::event(7);
+        new \ReflectionProperty(Event::class, 'titleReviewReason')->setValue($event, 'Проверьте название из источника.');
         $session = self::addSession($event, 17);
         self::addSession($event, 18);
-        $events = $this->createStub(EventEditingRepository::class);
+        $events = self::createStubForIntersectionOfInterfaces([EventEditingRepository::class, ImportedEventComparisons::class]);
         $events->method('findById')->willReturn($event);
         self::getContainer()->set(EventEditingRepository::class, $events);
         self::getContainer()->set(EventReferences::class, $this->createStub(EventReferences::class));
@@ -100,6 +102,7 @@ final class EventEditingHttpTest extends WebTestCase
         self::assertResponseRedirects('/admin/event/47');
         self::assertSame('existing-event', $event->getSlug());
         self::assertSame('Джазовый вечер', $event->getTitle());
+        self::assertNull($event->getTitleReviewReason());
         self::assertCount(2, $event->getSessions());
         self::assertSame($session, $event->findSession(17));
         self::assertSame(SessionStatus::SoldOut, $session->getStatus());
@@ -109,7 +112,7 @@ final class EventEditingHttpTest extends WebTestCase
     public function testEditorCannotSaveOtherOwnersEvent(): void
     {
         $client = $this->editor();
-        $events = $this->createMock(EventEditingRepository::class);
+        $events = $this->createMockForIntersectionOfInterfaces([EventEditingRepository::class, ImportedEventComparisons::class]);
         $events->expects(self::once())->method('findById')->with(47)->willReturn(self::event(8));
         self::getContainer()->set(EventEditingRepository::class, $events);
 

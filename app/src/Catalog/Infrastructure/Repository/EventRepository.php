@@ -9,42 +9,40 @@ use App\Catalog\Domain\EventNotFound;
 use App\Catalog\Domain\EventSession;
 use App\Catalog\Domain\EventStatus;
 use App\Shared\Infrastructure\Doctrine\AbstractDoctrineRepository;
-use DateTimeImmutable;
-use Override;
 
 readonly class EventRepository extends AbstractDoctrineRepository implements EventRepositoryInterface, ImportedEventComparisons
 {
-    #[Override]
+    #[\Override]
     public function save(Event $event): void
     {
         $this->add($event);
     }
 
-    #[Override]
+    #[\Override]
     public function delete(Event $event): void
     {
         $this->remove($event);
     }
 
-    #[Override]
-    public function findUpcomingPublishedByCategory(int $categoryId, DateTimeImmutable $now, int $limit = 200): array
+    #[\Override]
+    public function findUpcomingPublishedByCategory(int $categoryId, \DateTimeImmutable $now, int $limit = 200): array
     {
         return $this->findPublicEvents($now, $limit, categoryId: $categoryId);
     }
 
-    #[Override]
-    public function findCalendarEvents(DateTimeImmutable $from, ?DateTimeImmutable $until, ?int $cityId, bool $onlyFree, ?int $categoryId = null, string $search = '', int $limit = 200, int $offset = 0): array
+    #[\Override]
+    public function findCalendarEvents(\DateTimeImmutable $from, ?\DateTimeImmutable $until, ?int $cityId, bool $onlyFree, ?int $categoryId = null, string $search = '', int $limit = 200, int $offset = 0): array
     {
         return $this->findPublicEvents($from, $limit, categoryId: $categoryId, until: $until, cityId: $cityId, onlyFree: $onlyFree, search: $search, perDay: true, onlyAvailable: true, offset: $offset);
     }
 
-    #[Override]
-    public function findDigestSessions(DateTimeImmutable $from, DateTimeImmutable $until, int $cityId, bool $onlyFree, ?int $categoryId = null): array
+    #[\Override]
+    public function findDigestSessions(\DateTimeImmutable $from, \DateTimeImmutable $until, int $cityId, bool $onlyFree, ?int $categoryId = null): array
     {
         return $this->findPublicEvents($from, 200, categoryId: $categoryId, until: $until, cityId: $cityId, onlyFree: $onlyFree, allSessions: true, onlyAvailable: true);
     }
 
-    private function findPublicEvents(DateTimeImmutable $now, int $limit, ?int $categoryId = null, ?DateTimeImmutable $until = null, ?int $cityId = null, bool $onlyFree = false, string $search = '', bool $allSessions = false, bool $perDay = false, bool $onlyAvailable = false, int $offset = 0): array
+    private function findPublicEvents(\DateTimeImmutable $now, int $limit, ?int $categoryId = null, ?\DateTimeImmutable $until = null, ?int $cityId = null, bool $onlyFree = false, string $search = '', bool $allSessions = false, bool $perDay = false, bool $onlyAvailable = false, int $offset = 0): array
     {
         $rows = $this->entityManager->getConnection()->fetchAllAssociative(
             <<<'SQL'
@@ -101,8 +99,8 @@ readonly class EventRepository extends AbstractDoctrineRepository implements Eve
             id: (int) $row['id'],
             title: $row['title'],
             slug: $row['slug'],
-            startsAt: new DateTimeImmutable($row['starts_at']),
-            endsAt: $row['ends_at'] !== null ? new DateTimeImmutable($row['ends_at']) : null,
+            startsAt: new \DateTimeImmutable($row['starts_at']),
+            endsAt: null !== $row['ends_at'] ? new \DateTimeImmutable($row['ends_at']) : null,
             cityName: $row['city_name'],
             venueName: $row['venue_name'],
             address: $row['address'],
@@ -119,10 +117,10 @@ readonly class EventRepository extends AbstractDoctrineRepository implements Eve
     /** Ссылки приходят от сборщиков, на сайт пускаем только http(s). */
     private static function httpUrlOrNull(?string $url): ?string
     {
-        return $url !== null && preg_match('#^https?://#i', $url) === 1 ? $url : null;
+        return null !== $url && 1 === preg_match('#^https?://#i', $url) ? $url : null;
     }
 
-    #[Override]
+    #[\Override]
     public function findDuplicateCandidates(int $eventId, bool $publishedOnly = false): array
     {
         return $this->entityManager->getConnection()->fetchAllAssociative(
@@ -134,7 +132,7 @@ readonly class EventRepository extends AbstractDoctrineRepository implements Eve
         );
     }
 
-    #[Override]
+    #[\Override]
     public function forEvent(Event $event): array
     {
         if (null === $event->getImportObservation()) {
@@ -142,6 +140,7 @@ readonly class EventRepository extends AbstractDoctrineRepository implements Eve
         }
 
         $eventId = $event->getId();
+
         return $this->entityManager->getConnection()->fetchAllAssociative(<<<'SQL'
             SELECT candidate.id, candidate.title, candidate.source_url, candidate.ticket_url,
                 candidate.price_min, candidate.price_max, candidate.updated_at,
@@ -171,13 +170,13 @@ readonly class EventRepository extends AbstractDoctrineRepository implements Eve
             SQL, ['event' => $eventId]);
     }
 
-    #[Override]
+    #[\Override]
     public function findPublishedDuplicateSeedIds(): array
     {
         $ids = $this->entityManager->getConnection()->fetchFirstColumn(<<<'SQL'
             WITH candidates AS (
                 SELECT id, COUNT(*) OVER (
-                    PARTITION BY city_id, trim(regexp_replace(lower(title), '[[:space:]]+', ' ', 'g'))
+                    PARTITION BY city_id, afisha_normalized_title(title)
                 ) AS same_title
                 FROM event WHERE status = 'published'
             )
@@ -192,19 +191,19 @@ readonly class EventRepository extends AbstractDoctrineRepository implements Eve
         return array_map('intval', $ids);
     }
 
-    #[Override]
+    #[\Override]
     public function findDuplicatesOf(Event $event): array
     {
         return $this->repository(Event::class)->findBy(['duplicateOf' => $event]);
     }
 
-    #[Override]
+    #[\Override]
     public function existsByCity(int $cityId): bool
     {
         return $this->repository(Event::class)->count(['cityId' => $cityId]) > 0;
     }
 
-    #[Override]
+    #[\Override]
     public function existsByVenue(int $venueId): bool
     {
         $inEvents = $this->repository(Event::class)->count(['venueId' => $venueId]) > 0;
@@ -212,31 +211,31 @@ readonly class EventRepository extends AbstractDoctrineRepository implements Eve
         return $inEvents || $this->repository(EventSession::class)->count(['venueId' => $venueId]) > 0;
     }
 
-    #[Override]
+    #[\Override]
     public function existsBySource(int $sourceId): bool
     {
         return $this->repository(Event::class)->count(['sourceId' => $sourceId]) > 0;
     }
 
-    #[Override]
+    #[\Override]
     public function findById(int $id): Event
     {
         return $this->repository(Event::class)->find($id) ?? throw new EventNotFound($id);
     }
 
-    #[Override]
+    #[\Override]
     public function findBySlug(string $slug): Event
     {
         return $this->repository(Event::class)->findOneBy(['slug' => $slug]) ?? throw new EventNotFound($slug);
     }
 
-    #[Override]
+    #[\Override]
     public function existsBySlug(string $slug): bool
     {
         return $this->repository(Event::class)->count(['slug' => $slug]) > 0;
     }
 
-    #[Override]
+    #[\Override]
     public function existsBySourceExternalId(int $sourceId, string $externalId): bool
     {
         return $this->repository(Event::class)->count(['sourceId' => $sourceId, 'externalId' => $externalId]) > 0;
