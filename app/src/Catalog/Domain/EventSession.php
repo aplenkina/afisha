@@ -18,10 +18,19 @@ class EventSession extends DomainEntity
         private ?string $ticketUrl,
         private SessionStatus $status,
     ) {
+        self::assertChronology($this->startsAt, $this->endsAt);
+    }
+
+    public static function assertChronology(\DateTimeImmutable $startsAt, ?\DateTimeImmutable $endsAt): void
+    {
+        if (null !== $endsAt && $endsAt < $startsAt) {
+            throw new InvalidEventSession('Окончание сеанса не может быть раньше начала.');
+        }
     }
 
     public function reschedule(\DateTimeImmutable $startsAt, ?\DateTimeImmutable $endsAt): void
     {
+        self::assertChronology($startsAt, $endsAt);
         $this->startsAt = $startsAt;
         $this->endsAt = $endsAt;
     }

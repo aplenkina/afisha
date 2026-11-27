@@ -11,8 +11,6 @@ use Symfony\Component\Messenger\Stamp\HandledStamp;
 
 abstract class AbstractAdminController extends AbstractController
 {
-    private const string TIMEZONE = 'Europe/Minsk';
-
     public function __construct(
         protected MessageBusInterface $messageBus,
     ) {
@@ -45,22 +43,8 @@ abstract class AbstractAdminController extends AbstractController
         return null === $value || '' === trim($value) ? null : (float) str_replace(',', '.', $value);
     }
 
-    protected function toDecimal(?string $value): ?string
-    {
-        return null === $value || '' === trim($value) ? null : number_format((float) str_replace(',', '.', $value), 2, '.', '');
-    }
-
     protected function toString(?string $value): ?string
     {
         return null === $value || '' === trim($value) ? null : trim($value);
-    }
-
-    protected function toDateTime(?string $value): ?\DateTimeImmutable
-    {
-        if (null === $value || '' === trim($value)) {
-            return null;
-        }
-
-        return new \DateTimeImmutable($value, new \DateTimeZone(self::TIMEZONE));
     }
 }
