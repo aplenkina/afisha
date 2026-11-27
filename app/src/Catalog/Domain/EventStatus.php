@@ -15,4 +15,15 @@ enum EventStatus: string
     case Rejected = 'rejected';
     case Archived = 'archived';
     case Duplicate = 'duplicate';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::Draft => 'Черновик',
+            self::Published => 'Опубликовано',
+            self::Rejected => 'Отклонено',
+            self::Archived => 'В архиве',
+            self::Duplicate => 'Дубль',
+        };
+    }
 }

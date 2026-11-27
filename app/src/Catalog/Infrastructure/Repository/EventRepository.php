@@ -24,28 +24,6 @@ readonly class EventRepository extends AbstractDoctrineRepository implements Eve
     }
 
     #[\Override]
-    public function findList(?EventStatus $status = null, int $limit = 200, ?int $createdBy = null, ?int $categoryId = null, bool $onlyUnpublished = false): array
-    {
-        $criteria = [];
-        if (null !== $status) {
-            $criteria['status'] = $status;
-        } elseif ($onlyUnpublished) {
-            $criteria['status'] = array_values(array_map(
-                static fn (EventStatus $item): string => $item->value,
-                array_filter(EventStatus::cases(), static fn (EventStatus $item): bool => EventStatus::Published !== $item),
-            ));
-        }
-        if (null !== $createdBy) {
-            $criteria['createdBy'] = $createdBy;
-        }
-        if (null !== $categoryId) {
-            $criteria['categoryId'] = $categoryId;
-        }
-
-        return $this->repository(Event::class)->findBy($criteria, ['id' => 'DESC'], $limit);
-    }
-
-    #[\Override]
     public function findUpcomingPublishedByCategory(int $categoryId, \DateTimeImmutable $now, int $limit = 200): array
     {
         return $this->findPublicEvents($now, $limit, categoryId: $categoryId);

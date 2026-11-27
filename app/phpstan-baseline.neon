@@ -1,0 +1,193 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Call to an undefined method App\\Catalog\\Infrastructure\\Repository\\CategoryRepositoryInterface\:\:save\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Catalog/Application/CreateCategory/CreateCategoryHandler.php
+
+		-
+			message: '#^Call to an undefined method App\\Catalog\\Infrastructure\\Repository\\CategoryRepositoryInterface\:\:delete\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Catalog/Application/DeleteCategory/DeleteCategoryHandler.php
+
+		-
+			message: '#^Property App\\Catalog\\Domain\\Category\:\:\$createdAt is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Catalog/Domain/Category.php
+
+		-
+			message: '#^Property App\\Catalog\\Domain\\Category\:\:\$id \(int\|null\) is never assigned int so it can be removed from the property type\.$#'
+			identifier: property.unusedType
+			count: 1
+			path: src/Catalog/Domain/Category.php
+
+		-
+			message: '#^Property App\\Catalog\\Domain\\City\:\:\$id \(int\|null\) is never assigned int so it can be removed from the property type\.$#'
+			identifier: property.unusedType
+			count: 1
+			path: src/Catalog/Domain/City.php
+
+		-
+			message: '#^Property App\\Catalog\\Domain\\Event\:\:\$id \(int\|null\) is never assigned int so it can be removed from the property type\.$#'
+			identifier: property.unusedType
+			count: 1
+			path: src/Catalog/Domain/Event.php
+
+		-
+			message: '#^Property App\\Catalog\\Domain\\EventSession\:\:\$id \(int\|null\) is never assigned int so it can be removed from the property type\.$#'
+			identifier: property.unusedType
+			count: 1
+			path: src/Catalog/Domain/EventSession.php
+
+		-
+			message: '#^Property App\\Catalog\\Domain\\Source\:\:\$id \(int\|null\) is never assigned int so it can be removed from the property type\.$#'
+			identifier: property.unusedType
+			count: 1
+			path: src/Catalog/Domain/Source.php
+
+		-
+			message: '#^Property App\\Catalog\\Domain\\Source\:\:\$lastRunAt \(DateTimeImmutable\|null\) is never assigned DateTimeImmutable so it can be removed from the property type\.$#'
+			identifier: property.unusedType
+			count: 1
+			path: src/Catalog/Domain/Source.php
+
+		-
+			message: '#^Property App\\Catalog\\Domain\\Source\:\:\$lastRunStatus \(string\|null\) is never assigned string so it can be removed from the property type\.$#'
+			identifier: property.unusedType
+			count: 1
+			path: src/Catalog/Domain/Source.php
+
+		-
+			message: '#^Property App\\Catalog\\Domain\\Source\:\:\$lastRunSummary \(string\|null\) is never assigned string so it can be removed from the property type\.$#'
+			identifier: property.unusedType
+			count: 1
+			path: src/Catalog/Domain/Source.php
+
+		-
+			message: '#^Property App\\Catalog\\Domain\\Venue\:\:\$id \(int\|null\) is never assigned int so it can be removed from the property type\.$#'
+			identifier: property.unusedType
+			count: 1
+			path: src/Catalog/Domain/Venue.php
+
+		-
+			message: '#^PHPDoc tag @return with type App\\Catalog\\Domain\\Category is incompatible with native type iterable\.$#'
+			identifier: return.phpDocType
+			count: 1
+			path: src/Catalog/Infrastructure/Repository/CategoryRepository.php
+
+		-
+			message: '#^PHPDoc tag @return with type App\\Catalog\\Domain\\Category is incompatible with native type iterable\.$#'
+			identifier: return.phpDocType
+			count: 1
+			path: src/Catalog/Infrastructure/Repository/CategoryRepositoryInterface.php
+
+		-
+			message: '#^Call to an undefined static method App\\Catalog\\Infrastructure\\Repository\\CategoryRequestInterface\:\:fromString\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: src/Catalog/Infrastructure/Repository/CategoryRequestResolver.php
+
+		-
+			message: '#^Property App\\Catalog\\Infrastructure\\Repository\\CategoryRequestResolver\:\:\$serializer is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Catalog/Infrastructure/Repository/CategoryRequestResolver.php
+
+		-
+			message: '#^PHPDoc tag @return with type App\\Catalog\\Domain\\City is incompatible with native type array\.$#'
+			identifier: return.phpDocType
+			count: 1
+			path: src/Catalog/Infrastructure/Repository/CityRepositoryInterface.php
+
+		-
+			message: '#^PHPDoc tag @return with type App\\Catalog\\Domain\\Venue is incompatible with native type array\.$#'
+			identifier: return.phpDocType
+			count: 1
+			path: src/Catalog/Infrastructure/Repository/VenueRepositoryInterface.php
+
+		-
+			message: '#^Property App\\Identity\\Domain\\User\:\:\$createdAt is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: src/Identity/Domain/User.php
+
+		-
+			message: '#^Property App\\Identity\\Domain\\User\:\:\$id \(int\|null\) is never assigned int so it can be removed from the property type\.$#'
+			identifier: property.unusedType
+			count: 1
+			path: src/Identity/Domain/User.php
+
+		-
+			message: '#^Call to an undefined method Symfony\\Component\\HttpFoundation\\Session\\SessionInterface\:\:getFlashBag\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/Identity/Infrastructure/Http/UserAdminPresenter.php
+
+		-
+			message: '#^Property App\\Telegram\\Domain\\Subscriber\:\:\$active is unused\.$#'
+			identifier: property.unused
+			count: 1
+			path: src/Telegram/Domain/Subscriber.php
+
+		-
+			message: '#^Property App\\Telegram\\Domain\\Subscriber\:\:\$chatId is unused\.$#'
+			identifier: property.unused
+			count: 1
+			path: src/Telegram/Domain/Subscriber.php
+
+		-
+			message: '#^Property App\\Telegram\\Domain\\Subscriber\:\:\$city is unused\.$#'
+			identifier: property.unused
+			count: 1
+			path: src/Telegram/Domain/Subscriber.php
+
+		-
+			message: '#^Property App\\Telegram\\Domain\\Subscriber\:\:\$createdAt is unused\.$#'
+			identifier: property.unused
+			count: 1
+			path: src/Telegram/Domain/Subscriber.php
+
+		-
+			message: '#^Property App\\Telegram\\Domain\\Subscriber\:\:\$id is unused\.$#'
+			identifier: property.unused
+			count: 1
+			path: src/Telegram/Domain/Subscriber.php
+
+		-
+			message: '#^Offset ''importHealthy'' does not exist on null\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: tests/Admin/OperationsTest.php
+
+		-
+			message: '#^Offset ''lastSiteFailureAt'' does not exist on null\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: tests/Admin/OperationsTest.php
+
+		-
+			message: '#^Offset ''siteHealthy'' does not exist on null\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: tests/Admin/OperationsTest.php
+
+		-
+			message: '#^Offset ''stale'' does not exist on null\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: tests/Admin/OperationsTest.php
+
+		-
+			message: '#^Call to static method PHPUnit\\Framework\\Assert\:\:assertSame\(\) with array\{status\: ''unavailable''\} and array\{status\: ''unavailable''\} will always evaluate to true\.$#'
+			identifier: staticMethod.alreadyNarrowedType
+			count: 1
+			path: tests/Operations/ServerMetricsTest.php
+
+		-
+			message: '#^Call to function method_exists\(\) with ''Symfony\\\\Component\\\\Dotenv\\\\Dotenv'' and ''bootEnv'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: tests/bootstrap.php

@@ -11,7 +11,6 @@
         "doctrine/doctrine-migrations-bundle": "^4.0",
         "doctrine/orm": "^3.7",
         "easycorp/easyadmin-bundle": "^5.6",
-        "php-cs-fixer/shim": "^3.95",
         "phpdocumentor/reflection-docblock": "^6.0",
         "phpstan/phpdoc-parser": "^2.3",
         "symfony/asset-mapper": "8.1.*",
@@ -74,16 +73,18 @@
         "post-update-cmd": [
             "@auto-scripts"
         ],
-        "cs:check": "php-cs-fixer fix --dry-run --diff",
+        "cs:check": "php-cs-fixer check --diff",
         "cs:fix": "php-cs-fixer fix",
         "lint": [
             "@php bin/console lint:yaml config",
             "@php bin/console lint:twig templates",
             "@php bin/console lint:container"
         ],
+        "analyse": "phpstan analyse --no-progress --memory-limit=512M",
         "test": "@php bin/phpunit",
         "check": [
             "@cs:check",
+            "@analyse",
             "@lint",
             "@test"
         ]
@@ -98,6 +99,8 @@
         }
     },
     "require-dev": {
+        "php-cs-fixer/shim": "^3.95.32",
+        "phpstan/phpstan": "^2.3.7",
         "phpunit/phpunit": "^13.4",
         "symfony/browser-kit": "8.1.*",
         "symfony/css-selector": "8.1.*"

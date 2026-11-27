@@ -1,13 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Catalog\Application\CreateEvent;
 
+use App\Catalog\Application\EventEditing\EventEditingRepository;
+use App\Catalog\Application\EventEditing\EventReferences;
 use App\Catalog\Domain\Event;
 use App\Catalog\Domain\EventAlreadyImported;
-use App\Catalog\Infrastructure\Repository\CategoryRepositoryInterface;
-use App\Catalog\Infrastructure\Repository\CityRepositoryInterface;
-use App\Catalog\Infrastructure\Repository\EventRepositoryInterface;
-use App\Catalog\Infrastructure\Repository\VenueRepositoryInterface;
 use App\Shared\Application\FlusherInterface;
 use App\Shared\Application\SlugGeneratorInterface;
 use App\Shared\Bus\Command\HandlerInterface;
@@ -19,10 +19,8 @@ final readonly class CreateEventHandler implements HandlerInterface
     private const string DEFAULT_SLUG = 'event';
 
     public function __construct(
-        private EventRepositoryInterface $eventRepository,
-        private CategoryRepositoryInterface $categoryRepository,
-        private CityRepositoryInterface $cityRepository,
-        private VenueRepositoryInterface $venueRepository,
+        private EventEditingRepository $eventRepository,
+        private EventReferences $references,
         private SlugGeneratorInterface $slugGenerator,
         private FlusherInterface $flusher,
     ) {
@@ -30,16 +28,10 @@ final readonly class CreateEventHandler implements HandlerInterface
 
     public function __invoke(CreateEventCommand $command): int
     {
-        $this->categoryRepository->findById($command->categoryId);
-        $this->cityRepository->findById($command->cityId);
-
-        $venueIds = [$command->venueId];
-        foreach ($command->sessions as $session) {
-            $venueIds[] = $session->venueId;
-        }
-        foreach (array_unique(array_filter($venueIds)) as $venueId) {
-            $this->venueRepository->findById($venueId);
-        }
+        $this->references->check($command->categoryId, $command->cityId, [
+            $command->venueId,
+            ...array_map(static fn (CreateEventSession $session): ?int => $session->venueId, $command->sessions),
+        ]);
 
         if (
             null !== $command->sourceId

@@ -1,11 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Catalog\Application\UpdateEvent;
 
-use App\Catalog\Infrastructure\Repository\CategoryRepositoryInterface;
-use App\Catalog\Infrastructure\Repository\CityRepositoryInterface;
-use App\Catalog\Infrastructure\Repository\EventRepositoryInterface;
-use App\Catalog\Infrastructure\Repository\VenueRepositoryInterface;
+use App\Catalog\Application\EventEditing\EventEditingRepository;
+use App\Catalog\Application\EventEditing\EventReferences;
+use App\Catalog\Domain\Event;
+use App\Catalog\Domain\EventSession;
+use App\Catalog\Domain\InvalidEventSession;
 use App\Shared\Application\FlusherInterface;
 use App\Shared\Bus\Command\HandlerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -14,10 +17,8 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 final readonly class UpdateEventHandler implements HandlerInterface
 {
     public function __construct(
-        private EventRepositoryInterface $eventRepository,
-        private CategoryRepositoryInterface $categoryRepository,
-        private CityRepositoryInterface $cityRepository,
-        private VenueRepositoryInterface $venueRepository,
+        private EventEditingRepository $eventRepository,
+        private EventReferences $references,
         private FlusherInterface $flusher,
     ) {
     }
@@ -26,16 +27,12 @@ final readonly class UpdateEventHandler implements HandlerInterface
     {
         $event = $this->eventRepository->findById($command->id);
 
-        $this->categoryRepository->findById($command->categoryId);
-        $this->cityRepository->findById($command->cityId);
+        $this->references->check($command->categoryId, $command->cityId, [
+            $command->venueId,
+            ...array_map(static fn (UpdateEventSession $session): ?int => $session->venueId, $command->sessions),
+        ]);
 
-        $venueIds = [$command->venueId];
-        foreach ($command->sessions as $session) {
-            $venueIds[] = $session->venueId;
-        }
-        foreach (array_unique(array_filter($venueIds)) as $venueId) {
-            $this->venueRepository->findById($venueId);
-        }
+        $sessions = $this->prepareSessions($event, $command->sessions);
 
         $event->update(
             title: $command->title,
@@ -54,9 +51,7 @@ final readonly class UpdateEventHandler implements HandlerInterface
         );
 
         $keptSessions = [];
-        foreach ($command->sessions as $data) {
-            $session = null !== $data->id ? $event->findSession($data->id) : null;
-
+        foreach ($sessions as [$data, $session]) {
             if (null === $session) {
                 $session = $event->addSession(
                     startsAt: $data->startsAt,
@@ -81,5 +76,31 @@ final readonly class UpdateEventHandler implements HandlerInterface
         }
 
         $this->flusher->flush();
+    }
+
+    /**
+     * @param list<UpdateEventSession> $submitted
+     *
+     * @return list<array{UpdateEventSession, ?EventSession}>
+     */
+    private function prepareSessions(Event $event, array $submitted): array
+    {
+        $sessions = [];
+        $seen = [];
+        foreach ($submitted as $data) {
+            EventSession::assertChronology($data->startsAt, $data->endsAt);
+            $session = null;
+            if (null !== $data->id) {
+                $session = $event->findSession($data->id);
+                if (null === $session || isset($seen[$data->id])) {
+                    throw new InvalidEventSession('Сеанс отсутствует в событии или указан несколько раз. Обновите карточку.');
+                }
+                $seen[$data->id] = true;
+            }
+
+            $sessions[] = [$data, $session];
+        }
+
+        return $sessions;
     }
 }

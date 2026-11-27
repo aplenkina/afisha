@@ -2,26 +2,16 @@
 
 namespace App\Catalog\Infrastructure\Repository;
 
+use App\Catalog\Application\EventEditing\EventEditingRepository;
 use App\Catalog\Application\ShowCategoryEvents\CategoryEventView;
 use App\Catalog\Domain\Event;
 use App\Catalog\Domain\EventNotFound;
-use App\Catalog\Domain\EventStatus;
 
-interface EventRepositoryInterface
+interface EventRepositoryInterface extends EventEditingRepository
 {
-    public function save(Event $event): void;
-
     public function delete(Event $event): void;
 
-    /**
-     * @return Event
-     */
-    public function findList(?EventStatus $status = null, int $limit = 200, ?int $createdBy = null, ?int $categoryId = null, bool $onlyUnpublished = false): array;
-
     public function existsByCity(int $cityId): bool;
-
-    /** @return list<array{id: int, title: string, status: string, starts_at: string}> */
-    public function findDuplicateCandidates(int $eventId, bool $publishedOnly = false): array;
 
     /** @return list<int> */
     public function findPublishedDuplicateSeedIds(): array;
@@ -49,14 +39,5 @@ interface EventRepositoryInterface
     /**
      * @throws EventNotFound
      */
-    public function findById(int $id): Event;
-
-    /**
-     * @throws EventNotFound
-     */
     public function findBySlug(string $slug): Event;
-
-    public function existsBySlug(string $slug): bool;
-
-    public function existsBySourceExternalId(int $sourceId, string $externalId): bool;
 }

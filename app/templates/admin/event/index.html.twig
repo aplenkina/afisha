@@ -1,12 +1,9 @@
 {% extends '@EasyAdmin/page/content.html.twig' %}
 
-{% set status_labels = {draft: 'Черновик', published: 'Опубликовано', rejected: 'Отклонено', archived: 'В архиве', duplicate: 'Дубль'} %}
 
 {% block content_title 'События' %}
 {% block main %}
     <div class="admin-card">
-        {% set search = list_search() %}
-        {% set events = search.filter(events, event => [event.title, event.slug, event.id, status_labels[event.status.value], cities[event.cityId] ?? '', categories[event.categoryId] ?? '']) %}
         <form method="GET" action="{{ path('admin_event_index') }}" class="d-flex flex-wrap gap-3">
             {% include 'shared/_query_fields.html.twig' with {parameters: search.parameters()} only %}
             <div class="admin-form__field">
@@ -15,7 +12,7 @@
                     <option value="">Все</option>
                     <option value="unpublished" {{ statusFilter == 'unpublished' ? 'selected' }}>Не опубликовано</option>
                     {% for item in statuses %}
-                        <option value="{{ item.value }}" {{ statusFilter == item.value ? 'selected' : '' }}>{{ status_labels[item.value] }}</option>
+                        <option value="{{ item.value }}" {{ statusFilter == item.value ? 'selected' : '' }}>{{ item.label }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -32,17 +29,18 @@
         </form>
 
         {% include 'shared/_list_search_form.html.twig' with {
-            search: search, action: path('admin_event_index'), filters: {status: statusFilter, category: categoryId},
-            resetUrl: path('admin_event_index', {status: statusFilter, category: categoryId}), label: 'Поиск по событиям', placeholder: 'Название, город, категория или статус'
+            search: search, action: path('admin_event_index'), filters: filters,
+            resetUrl: path('admin_event_index', filters), label: 'Поиск по событиям', placeholder: 'Название, город, категория или статус'
         } only %}
-
+        {% if usesRegex %}
+            <p class="text-muted">Регулярное выражение проверяет до {{ regexLimit }} последних событий с выбранными фильтрами.</p>
+        {% endif %}
 
         {% if events is empty %}
             <p class="admin-empty">{{ search.query is not empty ? 'Совпадений не найдено.' : 'Событий пока нет.' }}</p>
         {% else %}
             <ul class="admin-list">
                 {% for event in events %}
-                    {% set sessions = event.sessions %}
                     <li class="admin-list__item">
                         <div class="admin-list__main">
                             <a class="admin-list__title admin-list__row-link" href="{{ path('admin_event_details', { id: event.id }) }}">{{ event.title }}</a>
@@ -50,35 +48,35 @@
                                 {% if event.status.value == 'duplicate' %}
                                     <span class="badge text-bg-secondary">Дубль</span>
                                 {% else %}
-                                    {{ status_labels[event.status.value] }}
+                                    {{ event.status.label }}
                                 {% endif %}
-                                · {{ cities[event.cityId] ?? '—' }} · {{ categories[event.categoryId] ?? '—' }}
-                                · сеансов: {{ sessions|length }}{% if sessions %}, ближайший {{ sessions|first.startsAt|date('d.m.Y H:i', 'Europe/Minsk') }}{% endif %}
+                                · {{ event.city ?? '—' }} · {{ event.category ?? '—' }}
+                                · сеансов: {{ event.sessionCount }}{% if event.firstSession %}, ближайший {{ event.firstSession|date('d.m.Y H:i', 'Europe/Minsk') }}{% endif %}
                             </span>
                         </div>
                         <div class="admin-list__actions">
                             {% if is_granted('ROLE_MODERATOR') %}
                             {% if event.status.value == 'duplicate' %}
-                                <form method="POST" data-keep-scroll action="{{ path('admin_event_status', { id: event.id, status: statusFilter, category: categoryId }) }}">
+                                <form method="POST" data-keep-scroll action="{{ path('admin_event_status', returnParameters|merge({id: event.id})) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('event-status-' ~ event.id) }}">
                                     <input type="hidden" name="status" value="draft">
                                     <button type="submit" class="btn btn-secondary">Вернуть в черновики</button>
                                 </form>
                             {% elseif event.status.value != 'published' %}
-                                <form method="POST" data-keep-scroll action="{{ path('admin_event_status', { id: event.id, status: statusFilter, category: categoryId }) }}">
+                                <form method="POST" data-keep-scroll action="{{ path('admin_event_status', returnParameters|merge({id: event.id})) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('event-status-' ~ event.id) }}">
                                     <input type="hidden" name="status" value="published">
                                     <button type="submit" class="btn btn-primary">Опубликовать</button>
                                 </form>
                             {% endif %}
                             {% if event.status.value == 'draft' %}
-                                <form method="POST" data-keep-scroll action="{{ path('admin_event_status', { id: event.id, status: statusFilter, category: categoryId }) }}">
+                                <form method="POST" data-keep-scroll action="{{ path('admin_event_status', returnParameters|merge({id: event.id})) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('event-status-' ~ event.id) }}">
                                     <input type="hidden" name="status" value="rejected">
                                     <button type="submit" class="btn btn-secondary">Отклонить</button>
                                 </form>
                             {% elseif event.status.value == 'published' %}
-                                <form method="POST" data-keep-scroll action="{{ path('admin_event_status', { id: event.id, status: statusFilter, category: categoryId }) }}">
+                                <form method="POST" data-keep-scroll action="{{ path('admin_event_status', returnParameters|merge({id: event.id})) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('event-status-' ~ event.id) }}">
                                     <button type="submit" name="status" value="draft" class="btn btn-secondary">Снять с публикации</button>
                                     <button type="submit" name="status" value="archived" class="btn btn-secondary">В архив</button>
@@ -90,6 +88,17 @@
                     </li>
                 {% endfor %}
             </ul>
+        {% endif %}
+
+        {% if page > 1 or hasNext %}
+            <nav class="admin-actions" aria-label="Страницы событий">
+                {% if page > 1 %}
+                    <a class="btn btn-secondary" href="{{ path('admin_event_index', pageParameters|merge({page: page - 1})) }}" rel="prev">Предыдущая страница</a>
+                {% endif %}
+                {% if hasNext %}
+                    <a class="btn btn-secondary" href="{{ path('admin_event_index', pageParameters|merge({page: page + 1})) }}" rel="next">Следующая страница</a>
+                {% endif %}
+            </nav>
         {% endif %}
 
         <div class="admin-actions">
