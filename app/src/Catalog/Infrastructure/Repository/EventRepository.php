@@ -2,6 +2,7 @@
 
 namespace App\Catalog\Infrastructure\Repository;
 
+use App\Catalog\Application\EventEditing\ImportedEventComparisons;
 use App\Catalog\Application\ShowCategoryEvents\CategoryEventView;
 use App\Catalog\Domain\Event;
 use App\Catalog\Domain\EventNotFound;
@@ -9,7 +10,7 @@ use App\Catalog\Domain\EventSession;
 use App\Catalog\Domain\EventStatus;
 use App\Shared\Infrastructure\Doctrine\AbstractDoctrineRepository;
 
-readonly class EventRepository extends AbstractDoctrineRepository implements EventRepositoryInterface
+readonly class EventRepository extends AbstractDoctrineRepository implements EventRepositoryInterface, ImportedEventComparisons
 {
     #[\Override]
     public function save(Event $event): void
@@ -124,39 +125,49 @@ readonly class EventRepository extends AbstractDoctrineRepository implements Eve
     {
         return $this->entityManager->getConnection()->fetchAllAssociative(
             <<<'SQL'
-                SELECT candidate.id, candidate.title, candidate.status, source_schedule.starts_at
-                FROM event original
-                JOIN event candidate ON candidate.city_id = original.city_id AND candidate.id <> original.id
-                JOIN LATERAL (
-                    SELECT MIN(starts_at) AS starts_at
-                    FROM event_session
-                    WHERE event_id = original.id AND status <> 'cancelled'
-                ) source_schedule ON source_schedule.starts_at IS NOT NULL
-                WHERE original.id = :event
-                  AND candidate.status IN ('draft', 'published')
-                  AND (original.status <> 'published' OR candidate.status = 'published')
-                  AND (NOT CAST(:published_only AS boolean) OR candidate.status = 'published')
-                  AND trim(regexp_replace(lower(original.title), '[[:space:]]+', ' ', 'g')) <> ''
-                  AND trim(regexp_replace(lower(candidate.title), '[[:space:]]+', ' ', 'g'))
-                      = trim(regexp_replace(lower(original.title), '[[:space:]]+', ' ', 'g'))
-                  AND NOT EXISTS (
-                      SELECT 1 FROM event_session current_session
-                      WHERE current_session.event_id = original.id
-                        AND current_session.status <> 'cancelled'
-                        AND NOT EXISTS (
-                            SELECT 1 FROM event_session other
-                            WHERE other.event_id = candidate.id
-                              AND other.status <> 'cancelled'
-                              AND other.starts_at = current_session.starts_at
-                              AND COALESCE(other.venue_id, candidate.venue_id)
-                                  = COALESCE(current_session.venue_id, original.venue_id)
-                        )
-                  )
-                ORDER BY (candidate.status = 'published') DESC, candidate.id
-                LIMIT 10
+                SELECT id, title, status, starts_at FROM afisha_duplicate_candidates(:event, CAST(:published_only AS boolean))
+                ORDER BY (status = 'published') DESC, id
                 SQL,
             ['event' => $eventId, 'published_only' => $publishedOnly ? 'true' : 'false'],
         );
+    }
+
+    #[\Override]
+    public function forEvent(Event $event): array
+    {
+        if (null === $event->getImportObservation()) {
+            return [];
+        }
+
+        $eventId = $event->getId();
+
+        return $this->entityManager->getConnection()->fetchAllAssociative(<<<'SQL'
+            SELECT candidate.id, candidate.title, candidate.source_url, candidate.ticket_url,
+                candidate.price_min, candidate.price_max, candidate.updated_at,
+                COALESCE(source.name, 'Редакция') AS source_name,
+                se.starts_at, se.status AS session_status, venue.name AS venue, venue.address
+            FROM event imported
+            CROSS JOIN LATERAL (
+                SELECT CASE WHEN pg_input_is_valid(imported.import_observation->>'startsAt', 'timestamp with time zone')
+                    THEN (imported.import_observation->>'startsAt')::timestamptz END AS starts_at
+            ) reference
+            JOIN event candidate ON candidate.city_id = imported.city_id
+                AND candidate.source_id IS DISTINCT FROM imported.source_id
+                AND (
+                    afisha_normalized_title(candidate.title) = afisha_normalized_title(imported.title)
+                    OR (imported.import_observation->>'sourceName' = 'CityDog'
+                        AND NULLIF(imported.ticket_url, '') = candidate.ticket_url)
+                )
+            JOIN event_session se ON se.event_id = candidate.id
+            LEFT JOIN venue ON venue.id = COALESCE(se.venue_id, candidate.venue_id)
+            LEFT JOIN source ON source.id = candidate.source_id
+            WHERE imported.id = :event
+              AND candidate.status IN ('draft', 'published', 'duplicate')
+              AND candidate.source_url ~ '^https?://'
+              AND se.starts_at BETWEEN reference.starts_at - interval '7 days' AND reference.starts_at + interval '7 days'
+            ORDER BY abs(extract(epoch FROM se.starts_at - reference.starts_at)), candidate.id
+            LIMIT 8
+            SQL, ['event' => $eventId]);
     }
 
     #[\Override]
@@ -165,7 +176,7 @@ readonly class EventRepository extends AbstractDoctrineRepository implements Eve
         $ids = $this->entityManager->getConnection()->fetchFirstColumn(<<<'SQL'
             WITH candidates AS (
                 SELECT id, COUNT(*) OVER (
-                    PARTITION BY city_id, trim(regexp_replace(lower(title), '[[:space:]]+', ' ', 'g'))
+                    PARTITION BY city_id, afisha_normalized_title(title)
                 ) AS same_title
                 FROM event WHERE status = 'published'
             )

@@ -10,13 +10,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
 	"time"
-
-	"github.com/temoto/robotstxt"
 
 	"afisha/internal/collector"
 	"afisha/internal/fetch"
@@ -77,28 +74,11 @@ func (c *Collector) Slug() string    { return c.slug }
 func (c *Collector) Name() string    { return c.name }
 func (c *Collector) BaseURL() string { return c.baseURL }
 
-// robots возвращает правила для нашего бота. Нет файла — можно всё; любая другая ошибка — не собираем вслепую.
-func (c *Collector) robots(ctx context.Context) (*robotstxt.Group, error) {
-	body, err := c.client.Get(ctx, c.baseURL+"/robots.txt")
-	if err != nil {
-		var se *fetch.StatusError
-		if errors.As(err, &se) && (se.Code == http.StatusNotFound || se.Code == http.StatusGone) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("robots.txt не прочитался: %w", err)
-	}
-	r, err := robotstxt.FromBytes(body)
-	if err != nil {
-		return nil, fmt.Errorf("robots.txt не разобрался: %w", err)
-	}
-	return r.FindGroup(c.userAgent), nil
-}
-
 func (c *Collector) Collect(ctx context.Context) (collector.Result, error) {
 	var res collector.Result
 	res.Stats.PagesTotal = len(c.cfg.Pages)
 
-	rules, err := c.robots(ctx)
+	rules, err := c.client.Robots(ctx, c.baseURL, c.userAgent)
 	if err != nil {
 		return res, err
 	}
@@ -221,15 +201,39 @@ func listItemURLs(page []byte) []string {
 	return urls
 }
 
+type ldPrice string
+
+func (p *ldPrice) UnmarshalJSON(raw []byte) error {
+	if len(raw) == 0 || string(raw) == "null" {
+		*p = ""
+		return nil
+	}
+	if raw[0] == '"' {
+		var text string
+		if err := json.Unmarshal(raw, &text); err != nil {
+			return err
+		}
+		*p = ldPrice(text)
+		return nil
+	}
+	var number json.Number
+	if err := json.Unmarshal(raw, &number); err != nil {
+		return err
+	}
+	*p = ldPrice(number.String())
+	return nil
+}
+
 type ldEvent struct {
-	Status    string `json:"eventStatus"`
-	Type      string `json:"@type"`
-	URL       string `json:"url"`
-	Name      string `json:"name"`
-	StartDate string `json:"startDate"`
-	EndDate   string `json:"endDate"`
-	Image     any    `json:"image"`
-	Location  struct {
+	Status      string `json:"eventStatus"`
+	Description string `json:"description"`
+	Type        string `json:"@type"`
+	URL         string `json:"url"`
+	Name        string `json:"name"`
+	StartDate   string `json:"startDate"`
+	EndDate     string `json:"endDate"`
+	Image       any    `json:"image"`
+	Location    struct {
 		Name    string `json:"name"`
 		Address struct {
 			Street   string `json:"streetAddress"`
@@ -237,10 +241,12 @@ type ldEvent struct {
 		} `json:"address"`
 	} `json:"location"`
 	Offers struct {
-		URL       string `json:"url"`
-		LowPrice  string `json:"lowPrice"`
-		HighPrice string `json:"highPrice"`
-		Price     string `json:"price"`
+		URL          string  `json:"url"`
+		Currency     string  `json:"priceCurrency"`
+		Availability string  `json:"availability"`
+		LowPrice     ldPrice `json:"lowPrice"`
+		HighPrice    ldPrice `json:"highPrice"`
+		Price        ldPrice `json:"price"`
 	} `json:"offers"`
 }
 
@@ -392,12 +398,12 @@ func toEvent(r ldEvent, categories map[string]string) (collector.Event, error) {
 		EndsAt:        ends,
 	}
 
-	low := cleanPrice(firstNonEmpty(r.Offers.LowPrice, r.Offers.Price))
+	low := cleanPrice(firstNonEmpty(string(r.Offers.LowPrice), string(r.Offers.Price)))
 	if low != "" {
 		e.PriceMin = &low
 		e.IsFree = low == "0" || low == "0.00"
 	}
-	if high := cleanPrice(r.Offers.HighPrice); high != "" {
+	if high := cleanPrice(string(r.Offers.HighPrice)); high != "" {
 		e.PriceMax = &high
 	}
 
@@ -439,8 +445,12 @@ func firstImage(v any) string {
 		return t
 	case []any:
 		if len(t) > 0 {
-			if s, ok := t[0].(string); ok {
-				return s
+			return firstImage(t[0])
+		}
+	case map[string]any:
+		for _, key := range []string{"contentUrl", "url"} {
+			if value, ok := t[key].(string); ok && value != "" {
+				return value
 			}
 		}
 	}

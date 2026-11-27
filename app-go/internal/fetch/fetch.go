@@ -2,11 +2,14 @@ package fetch
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/temoto/robotstxt"
 )
 
 const maxBody = 16 << 20
@@ -98,4 +101,21 @@ func (c *Client) Get(ctx context.Context, url string) ([]byte, error) {
 	}
 
 	return nil, fmt.Errorf("GET %s: %w", url, lastErr)
+}
+
+// Robots returns nil when the source has no robots.txt. Other errors stop collection.
+func (c *Client) Robots(ctx context.Context, baseURL, userAgent string) (*robotstxt.Group, error) {
+	body, err := c.Get(ctx, baseURL+"/robots.txt")
+	if err != nil {
+		var status *StatusError
+		if errors.As(err, &status) && (status.Code == http.StatusNotFound || status.Code == http.StatusGone) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("robots.txt не прочитался: %w", err)
+	}
+	rules, err := robotstxt.FromBytes(body)
+	if err != nil {
+		return nil, fmt.Errorf("robots.txt не разобрался: %w", err)
+	}
+	return rules.FindGroup(userAgent), nil
 }

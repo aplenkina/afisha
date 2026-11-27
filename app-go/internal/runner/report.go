@@ -36,7 +36,7 @@ type SourceReport struct {
 
 // Healthy — запуск прошёл без замечаний.
 func (r SourceReport) Healthy() bool {
-	return r.Status == StatusOK && r.Failed == 0 && r.Stats.PagesFailed == 0 && r.Stats.PagesBlocked == 0
+	return r.Status == StatusOK && r.Failed == 0 && r.Stats.PagesFailed == 0 && r.Stats.PagesBlocked == 0 && r.Stats.DetailsFailed == 0
 }
 
 // Summary — итог всего запуска.
@@ -161,6 +161,9 @@ func statusLine(r SourceReport) string {
 }
 
 func writePages(b *strings.Builder, st collector.Stats) {
+	if st.DetailsFailed > 0 {
+		fmt.Fprintf(b, "  Не загрузились карточки: %d\n", st.DetailsFailed)
+	}
 	if st.PagesTotal == 0 {
 		return
 	}

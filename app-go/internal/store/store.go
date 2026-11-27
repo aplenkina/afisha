@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"afisha/internal/collector"
+	"afisha/internal/collector/eventtitle"
 )
 
 type Store struct {
@@ -139,7 +140,8 @@ func (s *Store) LastRunAt(ctx context.Context) (time.Time, error) {
 	return *t, nil
 }
 
-// Save записывает событие черновиком. Повторный вызов не создаёт дублей:
+// Save записывает новое событие черновиком или связывает его с опубликованным оригиналом.
+// Повторный вызов не создаёт карточек:
 // событие ищется по (source_id, external_id), у существующего обновляются только цена и ссылки,
 // чтобы не затирать правки модератора. Дубль с новым сеансом возвращается в черновики.
 func (s *Store) Save(ctx context.Context, sourceID, cityID, categoryID int, e collector.Event) (created bool, err error) {
@@ -150,8 +152,19 @@ func (s *Store) Save(ctx context.Context, sourceID, cityID, categoryID int, e co
 	defer tx.Rollback(ctx)
 
 	// Use the same lock as publication, which checks the saved sessions.
-	if _, err = tx.Exec(ctx, `SELECT id FROM city WHERE id = $1 FOR NO KEY UPDATE`, cityID); err != nil {
+	var source string
+	if err = tx.QueryRow(ctx, `SELECT source.slug FROM city CROSS JOIN source
+		WHERE city.id = $1 AND source.id = $2 FOR NO KEY UPDATE OF city`, cityID, sourceID).Scan(&source); err != nil {
 		return false, err
+	}
+	title := eventtitle.Extract(e.Title, source)
+
+	if e.Observation != nil {
+		created, err := s.saveObservation(ctx, tx, sourceID, cityID, categoryID, source, e, title)
+		if err != nil {
+			return false, err
+		}
+		return created, tx.Commit(ctx)
 	}
 
 	var venueID *int
@@ -167,8 +180,8 @@ func (s *Store) Save(ctx context.Context, sourceID, cityID, categoryID int, e co
 	var originalID *int
 	err = tx.QueryRow(ctx, `
 		INSERT INTO event (title, slug, category_id, city_id, venue_id, price_min, price_max, is_free,
-			image_url, source_url, ticket_url, status, source_id, external_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6::numeric, $7::numeric, $8, $9, $10, $11, 'draft', $12, $13, now(), now())
+			image_url, source_url, ticket_url, status, source_id, external_id, created_at, updated_at, title_review_reason)
+		VALUES ($1, $2, $3, $4, $5, $6::numeric, $7::numeric, $8, $9, $10, $11, 'draft', $12, $13, now(), now(), NULLIF($14, ''))
 		ON CONFLICT (source_id, external_id) DO UPDATE SET
 			price_min = EXCLUDED.price_min,
 			price_max = EXCLUDED.price_max,
@@ -176,8 +189,8 @@ func (s *Store) Save(ctx context.Context, sourceID, cityID, categoryID int, e co
 			ticket_url = EXCLUDED.ticket_url,
 			updated_at = now()
 		RETURNING id, duplicate_of_id, (xmax = 0)`,
-		e.Title, e.Slug, categoryID, cityID, venueID, e.PriceMin, e.PriceMax, e.IsFree,
-		nullable(e.ImageURL), nullable(e.SourceURL), nullable(e.TicketURL), sourceID, e.ExternalID,
+		title.Display, e.Slug, categoryID, cityID, venueID, e.PriceMin, e.PriceMax, e.IsFree,
+		nullable(e.ImageURL), nullable(e.SourceURL), nullable(e.TicketURL), sourceID, e.ExternalID, title.ReviewReason,
 	).Scan(&eventID, &originalID, &created)
 	if err != nil {
 		return false, err
@@ -198,23 +211,26 @@ func (s *Store) Save(ctx context.Context, sourceID, cityID, categoryID int, e co
 			SET status = 'draft', duplicate_of_id = NULL
 			FROM event original
 			WHERE source.id = $1 AND original.id = source.duplicate_of_id
-			  AND EXISTS (
-				SELECT 1 FROM event_session current_session
-				WHERE current_session.event_id = source.id AND current_session.status <> 'cancelled'
-				  AND NOT EXISTS (
-					SELECT 1 FROM event_session other
-					WHERE other.event_id = original.id AND other.status <> 'cancelled'
-					  AND other.starts_at = current_session.starts_at
-					  AND COALESCE(other.venue_id, original.venue_id)
-					      = COALESCE(current_session.venue_id, source.venue_id)
-				  )
-			  )`, eventID)
+			  AND NOT afisha_duplicate_session_starts_match(source.id, original.id)`, eventID)
 		if err != nil {
+			return false, err
+		}
+	}
+	if created && title.ReviewReason == "" {
+		if err := markImportedDuplicate(ctx, tx, eventID); err != nil {
 			return false, err
 		}
 	}
 
 	return created, tx.Commit(ctx)
+}
+
+func markImportedDuplicate(ctx context.Context, tx pgx.Tx, eventID int) error {
+	_, err := tx.Exec(ctx, `
+		UPDATE event SET status = 'duplicate', duplicate_of_id = original.id, updated_at = now()
+		FROM (SELECT id FROM afisha_duplicate_candidates($1, true) ORDER BY id LIMIT 1) original
+		WHERE event.id = $1 AND event.status = 'draft'`, eventID)
+	return err
 }
 
 func ensureVenue(ctx context.Context, tx pgx.Tx, cityID int, name, address string) (int, error) {

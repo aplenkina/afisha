@@ -47,6 +47,49 @@
 {% endblock %}
 
 {% block main %}
+    {% if event and event.titleReviewReason %}
+        <div class="alert alert-warning" role="status">
+            <strong>Проверка названия</strong>
+            <p class="mb-0">{{ event.titleReviewReason }}</p>
+        </div>
+    {% endif %}
+    {% if event and event.importObservation %}
+        {% set observation = event.importObservation %}
+        {% set import_source = observation.sourceName|default('BezKassira') %}
+        {% set import_statuses = {scheduled: 'Запланировано', sold_out: 'Билеты распроданы', cancelled: 'Отменено', postponed: 'Перенесено', review: 'Требует проверки'} %}
+        <details class="alert {{ observation.checkError is defined or observation.issues is defined or observation.status in ['cancelled', 'postponed', 'review'] ? 'alert-warning' : 'alert-secondary' }} mb-3"
+                 {{ observation.checkError is defined or observation.issues is defined or observation.status in ['cancelled', 'postponed', 'review'] ? 'open' : '' }}>
+            <summary>Данные {{ import_source }} · {{ import_statuses[observation.status] ?? observation.status }} · {{ observation.checkedAt|date('d.m.Y H:i', 'Europe/Minsk') }}</summary>
+            <ul class="mb-0 mt-2">
+                {% if observation.checkError is defined %}
+                    <li>{{ observation.checkError }} · {{ observation.failedCheckAt|date('d.m.Y H:i', 'Europe/Minsk') }}</li>
+                {% endif %}
+                {% if observation.notice is defined %}<li>{{ observation.notice }}</li>{% endif %}
+                {% for issue in observation.issues ?? [] %}<li>{{ issue }}</li>{% endfor %}
+                {% if observation.startsAt is defined %}
+                    <li>{{ import_source == 'CityDog' ? 'Начало по анонсу' : 'Время в разметке' }} — {{ observation.startsAt }}{% if observation.endsAt is defined %} → {{ observation.endsAt }}{% endif %}</li>
+                {% endif %}
+                {% if observation.displayedDate is defined %}<li>В карточке — {{ observation.displayedDate }}</li>{% endif %}
+                {% if observation.title is defined %}<li>{{ import_source == 'CityDog' ? 'Название кандидата' : 'Название в разметке' }} — {{ observation.title }}</li>{% endif %}
+                {% if observation.displayedTitle is defined and observation.displayedTitle != observation.title|default('') %}
+                    <li>Название в карточке — {{ observation.displayedTitle }}</li>
+                {% endif %}
+                {% if observation.venue is defined %}<li>Площадка — {{ observation.venue }}{% if observation.address is defined %}, {{ observation.address }}{% endif %}</li>{% endif %}
+                {% if observation.displayedAddress is defined and observation.displayedAddress != observation.address|default('') %}
+                    <li>Адрес в карточке — {{ observation.displayedAddress }}</li>
+                {% endif %}
+                {% if observation.priceMin is defined %}
+                    <li>{{ import_source == 'CityDog' ? 'Цена по анонсу' : 'Цена в разметке' }} — {{ observation.priceMin }}{% if observation.priceMax is defined %}–{{ observation.priceMax }}{% endif %}</li>
+                {% endif %}
+                {% if observation.displayedPrice is defined %}<li>{{ observation.displayedPrice }}</li>{% endif %}
+                <li><a href="{{ observation.url }}">{{ import_source == 'CityDog' ? 'Подборка CityDog' : 'Карточка BezKassira' }}</a></li>
+                {% if observation.originalUrl is defined %}
+                    <li><a href="{{ observation.originalUrl }}">Пост в Instagram</a></li>
+                {% endif %}
+            </ul>
+        </details>
+    {% endif %}
+
     {% if event and event.status.value == 'duplicate' %}
         <section class="admin-card" aria-label="Статус карточки">
             <p class="mb-0"><span class="badge text-bg-secondary">Дубль</span> Карточка скрыта с сайта.
@@ -59,7 +102,7 @@
     {% if duplicates|default([]) is not empty %}
         <section class="admin-card" aria-labelledby="duplicate-events-title">
             <h2 id="duplicate-events-title">Возможные дубли</h2>
-            <p>Для каждого сеанса этой карточки у найденного события совпадают название, место, дата и время начала.</p>
+            <p>У событий совпадают название и город. Для каждого действующего сеанса этой карточки есть сеанс с тем же временем начала. Площадка может отличаться.</p>
             <ul class="mb-0">
                 {% for duplicate in duplicates %}
                     <li>
@@ -71,6 +114,23 @@
                             <input type="hidden" name="target" value="{{ duplicate.id }}">
                             <button type="submit" class="btn btn-secondary">Пометить дублем этого события</button>
                         </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
+    {% if comparisons|default([]) is not empty %}
+        <section class="admin-card" aria-labelledby="import-comparisons-title">
+            <h2 id="import-comparisons-title">Анонсы с тем же названием</h2>
+            <ul class="mb-0">
+                {% for comparison in comparisons %}
+                    <li>
+                        <a href="{{ comparison.source_url }}">{{ comparison.source_name }}</a>
+                        · {{ comparison.starts_at|date('d.m.Y H:i', 'Europe/Minsk') }}
+                        {% if comparison.session_status == 'cancelled' %} · Отменено{% endif %}
+                        {% if comparison.venue %} · {{ comparison.venue }}{% if comparison.address %}, {{ comparison.address }}{% endif %}{% endif %}
+                        {% if comparison.price_min is not null %} · {{ comparison.price_min }}{% if comparison.price_max is not null %}–{{ comparison.price_max }}{% endif %} BYN{% endif %}
+                        · <a href="{{ path('admin_event_details', {id: comparison.id}) }}">Карточка в «Афише»</a>
                     </li>
                 {% endfor %}
             </ul>
@@ -144,6 +204,9 @@
         <div class="admin-form__field">
             <label class="admin-form__label form-label" for="imageUrl">Ссылка на картинку</label>
             <input type="url" class="admin-form__input form-control" id="imageUrl" name="imageUrl" value="{{ event ? event.imageUrl : '' }}">
+            {% if event and not event.imageUrl and event.instagramPostUrl %}
+                {% include '_instagram_post.html.twig' with {postUrl: event.instagramPostUrl} only %}
+            {% endif %}
         </div>
 
         <div class="admin-form__field">

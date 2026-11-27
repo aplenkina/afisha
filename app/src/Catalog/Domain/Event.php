@@ -19,6 +19,7 @@ class Event extends DomainEntity
 
     private ?self $duplicateOf = null;
 
+    /** @param array<string, mixed>|null $importObservation */
     public function __construct(
         private string $title,
         private string $slug,
@@ -39,6 +40,8 @@ class Event extends DomainEntity
         private ?int $createdBy,
         private \DateTimeImmutable $createdAt,
         private \DateTimeImmutable $updatedAt,
+        private ?string $titleReviewReason = null,
+        private ?array $importObservation = null,
     ) {
         $this->sessions = new ArrayCollection();
     }
@@ -101,7 +104,10 @@ class Event extends DomainEntity
         ?string $sourceUrl,
         ?string $ticketUrl,
     ): void {
-        $this->title = $title;
+        if ($this->title !== $title) {
+            $this->titleReviewReason = null;
+            $this->title = $title;
+        }
         $this->slug = $slug;
         $this->description = $description;
         $this->categoryId = $categoryId;
@@ -196,6 +202,11 @@ class Event extends DomainEntity
         return $this->title;
     }
 
+    public function getTitleReviewReason(): ?string
+    {
+        return $this->titleReviewReason;
+    }
+
     public function getSlug(): string
     {
         return $this->slug;
@@ -251,9 +262,26 @@ class Event extends DomainEntity
         return $this->sourceUrl;
     }
 
+    public function getInstagramPostUrl(): ?string
+    {
+        foreach ([$this->importObservation['originalUrl'] ?? null, $this->sourceUrl] as $url) {
+            if (is_string($url) && 1 === preg_match('~^https://(?:www\.)?instagram\.com/((?:p|reel)/[A-Za-z0-9_-]+)/?(?:[?#].*)?$~iD', $url, $match)) {
+                return 'https://www.instagram.com/'.$match[1].'/';
+            }
+        }
+
+        return null;
+    }
+
     public function getTicketUrl(): ?string
     {
         return $this->ticketUrl;
+    }
+
+    /** @return array<string, mixed>|null */
+    public function getImportObservation(): ?array
+    {
+        return $this->importObservation;
     }
 
     public function getStatus(): EventStatus
